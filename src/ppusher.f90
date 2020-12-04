@@ -27,6 +27,8 @@ contains
 
   subroutine adv_eqn_top(params,F,spp)
 
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                           :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(INOUT)                                   :: F
@@ -45,6 +47,7 @@ contains
     INTEGER(ip),DIMENSION(params%pchunk)    :: tt
     !! time iterator.
     REAL(rp)  :: Bo
+    INTEGER             :: thread_num
 
     Bo=F%AB%Bo
     num_punct=params%num_punctures
@@ -54,9 +57,11 @@ contains
     !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
-    !$OMP& flagCon,B_R,B_PHI,B_Z)
+    !$OMP& flagCon,B_R,B_PHI,B_Z,thread_num)
     do pp=1_idef,spp%ppp,pchunk
 
+       thread_num = OMP_GET_THREAD_NUM()
+       
        !$OMP SIMD
        do cc=1_idef,pchunk
           tt(cc)=1
@@ -76,14 +81,22 @@ contains
              Y_R0(cc)=Y_R(cc)
              Y_PHI0(cc)=Y_PHI(cc)
              Y_Z0(cc)=Y_Z(cc)
+             
           end do
 
-          !write(6,*) 'R0',Y_R0
-          !write(6,*) 'PHI0',Y_PHI0
-          !write(6,*) 'Z0',Y_Z0
+          !write(6,*) thread_num,'R0',Y_R0
+          !write(6,*) thread_num,'PHI0',Y_PHI0
+          !write(6,*) thread_num,'Z0',Y_Z0          
           
           call advance_eqn_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
 
+          do cc=1_idef,pchunk
+             if (flagCon(cc).eq.0) then
+                write(6,*) thread_num,'trace left domain'
+                exit
+             endif
+          end do
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_PHI1(cc)=Y_PHI(cc)
@@ -93,9 +106,9 @@ contains
           do cc=1_idef,pchunk
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
-                !write(6,*) 'R1',Y_R
-                !write(6,*) 'PHI1',Y_PHI1
-                !write(6,*) 'Z1',Y_Z
+                !write(6,*) thread_num,'R1',Y_R
+                !write(6,*) thread_num,'PHI1',Y_PHI1
+                !write(6,*) thread_num,'Z1',Y_Z
                 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
                      (0._rp-Y_PHI0(cc))* &
@@ -104,8 +117,8 @@ contains
                      (0._rp-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
-                !write(6,*) 'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
-                !write(6,*) 'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
                 
                 tt(cc)=tt(cc)+1   
              else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
@@ -117,6 +130,9 @@ contains
                      (2*C_PI-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                
                 tt(cc)=tt(cc)+1   
              endif
           enddo
@@ -201,10 +217,10 @@ contains
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
@@ -301,10 +317,10 @@ contains
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
@@ -401,10 +417,10 @@ contains
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
@@ -503,10 +519,12 @@ contains
           do cc=1_idef,pchunk
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
-                spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+(-2*C_PI-Y_PHI0)* &
-                     (Y_R-Y_R0)/(Y_PHI1-Y_PHI0)
-                spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+(-2*C_PI-Y_PHI0)* &
-                     (Y_Z-Y_Z0)/(Y_PHI1-Y_PHI0)
+                spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
+                     (0._rp-Y_PHI0(cc))* &
+                     (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
+                spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
+                     (0._rp-Y_PHI0(cc))* &
+                     (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
              else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then

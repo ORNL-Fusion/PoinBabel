@@ -42,7 +42,7 @@ module input
     ! 'GAUSSIAN-ELLIPTICAL-TORUS', '2D-GAUSSIAN-ELLIPTIC-TORUS-MH',
     ! 'AVALANCHE-4D','TRACER','SPONG-3D','HOLLMANN-3D','HOLLMANN-3D-PSI',
     ! 'MH_psi'
-  REAL(rp), DIMENSION(3)  :: Xtrace 
+  REAL(rp), DIMENSION(3)  :: Xtrace = (/1.5_rp,0._rp,0._rp/)
     ! Initial position of tracer particle for debugging with
     ! spatial_distribution='TRACER'
 
