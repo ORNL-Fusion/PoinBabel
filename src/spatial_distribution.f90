@@ -32,7 +32,7 @@ subroutine intitial_spatial_distribution(params,spp,F)
      spp%vars%Y(:,2)=spp%Xtrace(2)
      spp%vars%Y(:,3)=spp%Xtrace(3)
   END SELECT
-
+  
 end subroutine intitial_spatial_distribution
 
 

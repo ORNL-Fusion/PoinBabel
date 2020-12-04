@@ -62,7 +62,7 @@ CONTAINS
 
     if (params%mpi_params%rank .EQ. 0) then
        write(output_unit_write,'(/,"* * * * * SIMULATION PARAMETERS * * * * *")')
-       write(output_unit_write,'("Number of punctures: ",E17.10," s")') params%num_punctures
+       write(output_unit_write,'("Number of punctures: ",I4)') params%num_punctures
        write(output_unit_write,'("Step length: ",E17.10)') params%dx
        write(output_unit_write,*) 'Magnetic field model: ',TRIM(params%field_model)
        write(output_unit_write,*) 'Magnetic field file: ',TRIM(params%magnetic_field_filename)
@@ -117,8 +117,7 @@ CONTAINS
     spp%ppp=ppp
     spp%spatial_distrib = TRIM(spatial_distrib)
 
-    if (spp%spatial_distrib.eq.'TRACER') &
-         spp%Xtrace = Xtrace((ii-1_idef)*3_idef + 1_idef:3_idef*ii)
+    if (spp%spatial_distrib.eq.'TRACER') spp%Xtrace = Xtrace
 
     ALLOCATE( spp%vars%punct(params%num_punctures,spp%ppp,2))
     ALLOCATE( spp%vars%Y(spp%ppp,3) )

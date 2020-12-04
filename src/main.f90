@@ -155,17 +155,22 @@ program main
   
   ! * * * SAVING INITIAL CONDITION AND VARIOUS SIMULATION PARAMETERS * * * !
   
-  call save_simulation_parameters(params,spp,F)  
-     
-  call save_simulation_outputs(params,spp,F) ! Save initial condition  
+  call save_simulation_parameters(params,spp,F)       
 
+  if (params%mpi_params%rank .EQ. 0) then
+     flush(output_unit_write)
+  end if
   
   ! * * * SAVING INITIAL CONDITION AND VARIOUS SIMULATION PARAMETERS * * * !
 
 
   call timing(params)
 
-  if (params%field_model.eq.'ANALYTICAL') then
+  if (params%mpi_params%rank .EQ. 0) then
+     flush(output_unit_write)
+  end if
+
+  if (params%field_model.eq.'ANALYTICAL') then     
      call adv_eqn_top(params,F,spp)
   else if ((params%field_model.eq.'PSPLINE').and.(F%Bflux)) then
      call adv_interp_psi_top(params,F,spp)
@@ -209,7 +214,7 @@ program main
   ! * * * FINALIZING SIMULATION * * *
 
   if (params%mpi_params%rank .EQ. 0) then
-     write(output_unit_write,'("KORC ran successfully!")')
+     write(output_unit_write,'("PoinBabel ran successfully!")')
      close(output_unit_write)
   end if
   

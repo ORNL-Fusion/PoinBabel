@@ -16,7 +16,7 @@ module input
     ! Run 10 mu s If transients exist put 5 extra mu s.
   REAL(rp) :: dx = 1.E-2
     ! Time step as fraction of relativistic gyro-period
-  CHARACTER(30) :: field_model = 'M3D_C1'
+  CHARACTER(30) :: field_model = 'ANALYTICAL'
   CHARACTER(150) :: magnetic_field_filename = 'C1.h5'
   !  magnetic_field_filename = 'JFIT_D3D_164409_1405ms.h5'
   INTEGER :: time_slice = 000
@@ -153,13 +153,7 @@ CONTAINS
              call PB_abort(13)
           END SELECT
           IF (read_stat/=0) then
-             write(output_unit_write,*) ('Error reading namelist '//TRIM(ctmp)//'.')
-             if(TRIM(ctmp).eq.'input_parameters') then
-                write(output_unit_write,*) 'Check that  &
-                     &magnetic_field_filenames is not larger than 100, &
-                     &else need to increase allocation!'
-             endif
-             
+             write(output_unit_write,*) ('Error reading namelist '//TRIM(ctmp)//'.')             
              call PB_abort(13)
           end if
        ENDIF

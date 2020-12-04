@@ -70,7 +70,7 @@ contains
        !$OMP END SIMD
 
        do while (maxval(tt).le.num_punct)
-
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_R0(cc)=Y_R(cc)
@@ -85,7 +85,7 @@ contains
              Y_PHI1(cc)=Y_PHI(cc)
              Y_PHI(cc)=modulo(Y_PHI(cc),2*C_PI)
           enddo
-
+          
           do cc=1_idef,pchunk
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
@@ -95,7 +95,7 @@ contains
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
                      (-2*C_PI-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
-
+                
                 tt(cc)=tt(cc)+1   
              else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
 

@@ -1416,34 +1416,29 @@ CONTAINS
     !! are lengths, while keeping vars%Y(2,:), which is an angle
 
 
+    if (params%mpi_params%rank .EQ. 0) then
+       write(output_unit_write,'("Saving simulations outputs")')
+    end if
+    
     write(tmp_str,'(I18)') params%mpi_params%rank
     filename = TRIM(params%path_to_outputs) // "file_" &
          // TRIM(ADJUSTL(tmp_str)) // ".h5"
     call h5fopen_f(TRIM(filename), H5F_ACC_RDWR_F, h5file_id, h5error)
 
-    ! Create group 'it'
-    write(tmp_str,'(I18)') params%it
-    gname = TRIM(ADJUSTL(tmp_str))
+    gname = 'out'
     call h5lexists_f(h5file_id,TRIM(gname),object_exists,h5error)
 
     if (.NOT.object_exists) then ! Check if group does exist.
        call h5gcreate_f(h5file_id, TRIM(gname), group_id, h5error)
-
-
-       write(tmp_str,'(I18)') ss
-       subgname = "spp_" // TRIM(ADJUSTL(tmp_str))
-       call h5gcreate_f(group_id, TRIM(subgname), subgroup_id, h5error)
-
-
+       
+       
        dset = "Punctures"
-       call rsave_3d_array_to_hdf5(subgroup_id, dset, &
+       call rsave_3d_array_to_hdf5(group_id, dset, &
             spp%vars%punct)
 
        dset = "FlagCon"
-       call save_1d_array_to_hdf5(subgroup_id, dset, &
+       call save_1d_array_to_hdf5(group_id, dset, &
             INT(spp%vars%flagCon,idef))
-
-       call h5gclose_f(subgroup_id, h5error)
 
 
        call h5gclose_f(group_id, h5error)
