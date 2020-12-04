@@ -77,6 +77,10 @@ contains
              Y_PHI0(cc)=Y_PHI(cc)
              Y_Z0(cc)=Y_Z(cc)
           end do
+
+          !write(6,*) 'R0',Y_R0
+          !write(6,*) 'PHI0',Y_PHI0
+          !write(6,*) 'Z0',Y_Z0
           
           call advance_eqn_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
 
@@ -89,12 +93,19 @@ contains
           do cc=1_idef,pchunk
              if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
+                !write(6,*) 'R1',Y_R
+                !write(6,*) 'PHI1',Y_PHI1
+                !write(6,*) 'Z1',Y_Z
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (-2*C_PI-Y_PHI0(cc))* &
+                     (0._rp-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
+
+                !write(6,*) 'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) 'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
                 
                 tt(cc)=tt(cc)+1   
              else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
