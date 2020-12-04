@@ -1,0 +1,40 @@
+# ignore build directory
+/build
+
+# ignore runs directory
+/runs
+
+# ignore all CMakeFile directories
+**/CMakeFiles
+
+# ignore all CmakeCache.txt files
+CMakeCache.txt
+
+# ignore all cmake_install.cmake files
+cmake_install.cmake
+
+# ignore all Makefile files
+Makefile
+
+# ignore all previous version files
+*~
+
+# ignore all unsaved files
+*#
+
+# ignore all .txt files
+#*.txt
+
+#ignore all .h5 files
+*.h5
+
+#ignore files in OUT_TEST
+**/OUT_TEST
+
+# ignore CTest files
+CTestTestfile.cmake
+**/Testing
+
+#ignore FIO build and install
+/FIO/build
+/FIO/install
