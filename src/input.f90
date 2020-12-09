@@ -1,11 +1,10 @@
-module input
+module PB_input
   !! @note Module with subroutines to read in all namelists in supplied
   !! input file and broadcast to all mpi processes.
   USE types
   USE hpc
   
   IMPLICIT NONE
-
 
   !! Default values for all inputs
   !! -----------------------------------------------
@@ -26,6 +25,7 @@ module input
   REAL(rp) :: zmin = -1.65
   LOGICAL :: HDF5_error_handling = .TRUE.
   INTEGER :: pchunk = 1
+  REAL(rp) :: phi_section
 
   !! -----------------------------------------------
   !! plasma_species
@@ -45,6 +45,7 @@ module input
   REAL(rp), DIMENSION(3)  :: Xtrace = (/1.5_rp,0._rp,0._rp/)
     ! Initial position of tracer particle for debugging with
     ! spatial_distribution='TRACER'
+  CHARACTER(30) :: position_filename = 'positions.dat'
 
   !! -----------------------------------------------
   !! analytical_fields_params
@@ -92,8 +93,8 @@ CONTAINS
     !! Namelist declarations
     NAMELIST /input_parameters/ field_model,magnetic_field_filename, &
          num_punctures,dx,HDF5_error_handling,time_slice,rmax, &
-         rmin,zmax,zmin,pchunk
-    NAMELIST /plasma_species/ ppp,spatial_distrib,Xtrace
+         rmin,zmax,zmin,pchunk,phi_section
+    NAMELIST /plasma_species/ ppp,spatial_distrib,Xtrace,position_filename
     NAMELIST /analytical_fields_params/ Bo,minor_radius,major_radius,&
          qa,qo,current_direction
     NAMELIST /externalPlasmaModel/ Bfield, Bflux,axisymmetric_fields,psip_conv
@@ -251,4 +252,4 @@ CONTAINS
 
   END SUBROUTINE rmcoment
   
-end module input
+end module PB_input

@@ -12,7 +12,7 @@ program main
   use interp
   use initialize
   use finalize
-  use input
+  use PB_input
 #ifdef FIO
   use fio
 #endif

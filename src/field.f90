@@ -6,7 +6,7 @@ module field
   use hpc
   use interp
   use PB_HDF5
-  use input
+  USE PB_input
 
   IMPLICIT NONE
 
@@ -75,6 +75,7 @@ CONTAINS
   ! * * * * * * * * * * * *  * * * * * * * * * * * * * !
 
   subroutine initialize_fields(params,F)
+    
     !! @note Subroutine that initializes the analytical or externally
     !! calculated electric and magnetic fields. @endnote
     !! In this subroutine we load the parameters of the electric and
@@ -195,16 +196,11 @@ CONTAINS
              if (F%Bflux) then
                 write(output_unit_write,'("PSIp(r=0)",E17.10)') F%PSIp(F%dims(1)/2,F%dims(3)/2)
                 write(output_unit_write,'("BPHI(r=0)",E17.10)') F%Bo
-                write(output_unit_write,'("EPHI(r=0)",E17.10)') F%Eo
-             else if (F%Bflux3D) then
-                write(output_unit_write,'("PSIp(r=0)",E17.10)') F%PSIp3D(F%dims(1)/2,1,F%dims(3)/2)
              else
                 write(output_unit_write,'("BR(r=0)",E17.10)') F%B_2D%R(F%dims(1)/2,F%dims(3)/2)
                 write(output_unit_write,'("BPHI(r=0)",E17.10)') &
                      F%B_2D%PHI(F%dims(1)/2,F%dims(3)/2)
                 write(output_unit_write,'("BZ(r=0)",E17.10)') F%B_2D%Z(F%dims(1)/2,F%dims(3)/2)
-                write(output_unit_write,'("EPHI(r=0)",E17.10)') &
-                     F%E_2D%PHI(F%dims(1)/2,F%dims(3)/2)
              end if
           end if
 

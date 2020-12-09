@@ -12,7 +12,6 @@ CONTAINS
 
 
   subroutine cyl_check_if_confined_p(pchunk,a,R0,Xcyl_R,Xcyl_Z,flag)
-    implicit none
     INTEGER, INTENT(IN)  :: pchunk
     REAL(rp),DIMENSION(pchunk),  INTENT(IN)      :: Xcyl_R
     REAL(rp),DIMENSION(pchunk),  INTENT(IN)      :: Xcyl_Z

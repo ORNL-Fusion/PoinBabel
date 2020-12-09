@@ -4,11 +4,11 @@
 !  @brief Interface for the fio interpolation library.
 !*******************************************************************************
 
-MODULE korc_fio
+MODULE fio
   USE, INTRINSIC :: iso_c_binding
-  USE korc_types
-  USE korc_input
-  USE korc_HDF5
+  USE types
+  USE input
+  USE PB_HDF5
   USE mpi
 
   IMPLICIT NONE
@@ -235,12 +235,11 @@ MODULE korc_fio
 
 CONTAINS
 
-  SUBROUTINE initialize_m3d_c1(params, F, P, spp,init)
+  SUBROUTINE initialize_m3d_c1(params, F, spp,init)
 
     TYPE(KORC_PARAMS), INTENT(INOUT)           :: params
     TYPE(FIELDS), INTENT(INOUT)                :: F
-    TYPE(PROFILES), INTENT(INOUT)              :: P
-    TYPE(SPECIES), DIMENSION(:), INTENT(INOUT) :: spp
+    TYPE(SPECIES), INTENT(INOUT) :: spp
     LOGICAL, INTENT(IN)  :: init
     
     INTEGER                                    :: ii
@@ -251,131 +250,48 @@ CONTAINS
     INTEGER (C_INT)                         :: FIO_tmp
     TYPE(C_PTR) :: hint_tmp
     real(rp), DIMENSION(3) :: x
-    REAL(rp), DIMENSION(3)         :: Btmp
-    
-    if (init) then
+    REAL(rp), DIMENSION(3)         :: Btmp   
 
-       status = fio_open_source(FIO_M3DC1_SOURCE,           &
-            TRIM(params%magnetic_field_filename)            &
-            // C_NULL_CHAR, F%isrc)       
+    status = fio_open_source(FIO_M3DC1_SOURCE,           &
+         TRIM(params%magnetic_field_filename)            &
+         // C_NULL_CHAR, F%isrc)       
 
-       F%ind0_2x1t=ind0_2x1t       
-
-       F%ind_2x1t=F%ind0_2x1t
-
-
-
-    else
-       status = fio_close_field(F%FIO_B)
-       status = fio_close_field(F%FIO_B+1)
-       status = fio_close_field(F%FIO_A)
-
-       status = fio_close_field(P%FIO_ne)
-       status = fio_close_field(P%FIO_te)
-       status = fio_close_field(P%FIO_ni)
-       
-    end if
 
     isrc=F%isrc
     
     status = fio_get_options(isrc)
        
-
-    if (.not.F%ReInterp_2x1t) then
-       status = fio_set_int_option(FIO_TIMESLICE, params%time_slice)
-    else
-       status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t)
-    end if
-
+    status = fio_set_int_option(FIO_TIMESLICE, params%time_slice)
     
-    status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, F%FIO_B)
-    status = fio_get_field(isrc, FIO_ELECTRIC_FIELD, F%FIO_E)
-    status = fio_get_field(isrc, FIO_VECTOR_POTENTIAL, F%FIO_A)
+    status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, F%FIO_B)    
 
-    status = fio_get_real_field_parameter(F%FIO_B, FIO_TIME, time0)
+    hint_tmp=c_null_ptr
+    x(1)=spp%Xtrace(1)
+    x(2)=spp%Xtrace(2)
+    x(3)=spp%Xtrace(3)
 
-    write(output_unit_write,*) 'FIO present time index',F%ind_2x1t
-    write(output_unit_write,*) 'FIO present time',time0
+    status = fio_eval_field(F%FIO_B, x(1),                      &
+         Btmp(1),hint_tmp)
 
-    if (F%ReInterp_2x1t) then
-       status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t+1)
-
-       status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, FIO_tmp)
-       
-       status = fio_get_real_field_parameter(FIO_tmp, FIO_TIME, time1)
-       write(output_unit_write,*) 'FIO next time index',F%ind_2x1t+1
-       write(output_unit_write,*) 'FIO next time',time1
-
-       status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t)
-
-       params%snapshot_frequency=time1-time0
-
-       !write(6,*) 'snapshot_frequency',params%snapshot_frequency
-       !write(6,*) 'dt',params%dt
-       
-       if (.not.init) then
-          
-          params%t_skip = FLOOR(params%snapshot_frequency/params%cpp%time/ &
-               params%dt,ip)
-          
-       end if
-              
-    end if    
+    F%Bo = -Btmp(2)
     
-    if (.not.F%Efield) F%FIO_E=-1
+    do pp = 1, spp%ppp
+       status = fio_allocate_search_hint(isrc, spp%vars%hint(pp))
+    end do
 
-    status = fio_set_int_option(FIO_SPECIES, FIO_ELECTRON);
-    status = fio_get_field(isrc, FIO_DENSITY, P%FIO_ne);
-    status = fio_get_field(isrc, FIO_TEMPERATURE, P%FIO_te);
-
-    status = fio_set_int_option(FIO_SPECIES, FIO_MAIN_ION);
-    status = fio_get_field(isrc, FIO_DENSITY, P%FIO_ni);
-
-
-    if (init) then
-       if (.NOT.(params%restart.OR.params%proceed)) then
-          hint_tmp=c_null_ptr
-          x(1)=spp(1)%Ro
-          x(2)=spp(1)%PHIo
-          x(3)=spp(1)%Zo
-
-          status = fio_eval_field(F%FIO_B, x(1),                      &
-               Btmp(1),hint_tmp)
-
-          F%Bo = Btmp(2)
-          F%Eo = 1.0
-          F%Ro = 1.0
-          F%Zo = 1.0
-       end if
-
-       do ii = 1, params%num_species
-
-          do pp = 1, spp(ii)%ppp
-             status = fio_allocate_search_hint(isrc, spp(ii)%vars%hint(pp))
-             !spp(ii)%vars%hint(pp)=c_null_ptr
-          end do
-
-          spp(ii)%vars%cart = .false.
-       end do
-    end if
+    spp%vars%cart = .false.
 
     if (params%mpi_params%rank .EQ. 0) then
        write(output_unit_write,*) 'Calculate B',F%FIO_B
-       write(output_unit_write,*) 'Calculate E',F%FIO_E
-       write(output_unit_write,*) 'Calculate A',F%FIO_A
-       write(output_unit_write,*) 'Calculate ne',P%FIO_ne
-       write(output_unit_write,*) 'Calculate Te',P%FIO_te
-       write(output_unit_write,*) 'Calculate ni',P%FIO_ni
     end if
        
   END SUBROUTINE initialize_m3d_c1
   
-  SUBROUTINE initialize_nimrod(params, F, P, spp,init)
+  SUBROUTINE initialize_nimrod(params, F, spp,init)
 
     TYPE(KORC_PARAMS), INTENT(INOUT)           :: params
     TYPE(FIELDS), INTENT(INOUT)                :: F
-    TYPE(PROFILES), INTENT(INOUT)              :: P
-    TYPE(SPECIES), DIMENSION(:), INTENT(INOUT) :: spp
+    TYPE(SPECIES), INTENT(INOUT) :: spp
     LOGICAL, INTENT(IN)  :: init
     
     INTEGER                                    :: ii
@@ -389,283 +305,52 @@ CONTAINS
     REAL(rp), DIMENSION(3)         :: Btmp
     CHARACTER(150) :: filename
 
+    
+    status = fio_open_source(FIO_NIMROD_SOURCE,           &
+         TRIM(params%magnetic_field_filename)            &
+         // C_NULL_CHAR, F%isrc)       
 
-    if (init) then
-       F%Efield = Efield
-       F%PSIp_lim=PSIp_lim
-       F%PSIp_0=PSIp_0
-       F%ReInterp_2x1t=ReInterp_2x1t
-
-       if (params%proceed) then
-          
-          filename=TRIM(magnetic_field_directory)//TRIM(magnetic_field_filenames(ind0_2x1t))       
-       
-          status = fio_open_source(FIO_NIMROD_SOURCE, &
-               filename // C_NULL_CHAR, F%isrc)
-          
-          isrc=F%isrc
-          status = fio_get_options(isrc)
-          status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, F%FIO_B)
-          
-          hint_tmp=c_null_ptr
-          x(1)=spp(1)%Ro
-          x(2)=spp(1)%PHIo
-          x(3)=spp(1)%Zo
-
-          status = fio_eval_field(F%FIO_B, x(1),                      &
-               Btmp(1),hint_tmp)
-
-          F%Bo = Btmp(2)
-          F%Eo = 1.0
-          F%Ro = 1.0
-          F%Zo = 1.0
-
-          status = fio_close_field(F%FIO_B)
-          status=fio_close_source(F%isrc)
-          
-          call load_prev_iter(params)
-          F%ind0_2x1t=params%prev_iter_2x1t+1
-       else
-          F%ind0_2x1t=ind0_2x1t
-       end if
-
-       F%ind_2x1t=F%ind0_2x1t
-
-       filename=TRIM(magnetic_field_directory)//TRIM(magnetic_field_filenames(F%ind_2x1t))       
-
-
-       if (.not.F%ReInterp_2x1t) then
-          filename=TRIM(params%magnetic_field_filename)  
-       else
-          filename=TRIM(magnetic_field_directory)//TRIM(magnetic_field_filenames(F%ind_2x1t))  
-       end if
-       
-       status = fio_open_source(FIO_NIMROD_SOURCE, &
-            filename // C_NULL_CHAR, F%isrc)
-
-    else
-       status = fio_close_field(F%FIO_B)
-       status = fio_close_field(F%FIO_B+1) ! actually for E, to account for F%Efield=-1
-!       status = fio_close_field(F%FIO_A)
-
-       status = fio_close_field(P%FIO_ne)
-!       status = fio_close_field(P%FIO_te)
-!       status = fio_close_field(P%FIO_ni)
-
-       status=fio_close_source(F%isrc)
-
-       filename=TRIM(magnetic_field_directory)//TRIM(magnetic_field_filenames(F%ind_2x1t))
-       
-       status = fio_open_source(FIO_NIMROD_SOURCE, &
-            filename // C_NULL_CHAR, F%isrc)       
-             
-    end if
 
     isrc=F%isrc
     
-    status = fio_get_options(isrc)
-
-
-    !if (.not.F%ReInterp_2x1t) then
-    !   status = fio_set_int_option(FIO_TIMESLICE, params%time_slice)
-    !else
-    !   status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t)
-    !end if
-    ! For NIMROD dump*, status=fio_get_options(isrc)=0, can't set FIO_TIMESLICE
-    ! as was the case for C1.h5 having information on multiple timeslices 
-
+    status = fio_get_options(isrc)       
     
-    status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, F%FIO_B)
-    status = fio_get_field(isrc, FIO_ELECTRIC_FIELD, F%FIO_E)
-    !status = fio_get_field(isrc, FIO_VECTOR_POTENTIAL, F%FIO_A)
-    F%FIO_A=-1
+    status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, F%FIO_B)    
 
+    hint_tmp=c_null_ptr
+    x(1)=spp%Xtrace(1)
+    x(2)=spp%Xtrace(2)
+    x(3)=spp%Xtrace(3)
+
+    status = fio_eval_field(F%FIO_B, x(1),Btmp(1),hint_tmp)
+
+    F%Bo = -Btmp(2)
     
-    !status = fio_get_real_field_parameter(F%FIO_B, FIO_TIME, time0)
-    time0=time_of_filenames(F%ind_2x1t)
+    do pp = 1,spp%ppp
+       status = fio_allocate_search_hint(isrc, spp%vars%hint(pp))
+    end do
 
-    write(output_unit_write,*) 'FIO present time index',F%ind_2x1t
-    write(output_unit_write,*) 'FIO present time',time0
-
-    if (F%ReInterp_2x1t) then
-       !status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t+1)
-
-       !status = fio_get_field(isrc, FIO_MAGNETIC_FIELD, FIO_tmp)
-       
-       !status = fio_get_real_field_parameter(FIO_tmp, FIO_TIME, time1)
-       time1=time_of_filenames(F%ind_2x1t+1)
-       write(output_unit_write,*) 'FIO next time index',F%ind_2x1t+1
-       write(output_unit_write,*) 'FIO next time',time1
-
-       !status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t)
-
-       params%snapshot_frequency=time1-time0
-
-       !write(6,*) 'snapshot_frequency',params%snapshot_frequency
-       !write(6,*) 'dt',params%dt
-       
-       if (.not.init) then
-          
-          params%t_skip = FLOOR(params%snapshot_frequency/params%cpp%time/ &
-               params%dt,ip)
-          
-       end if
-              
-    end if    
-    
-    if (.not.F%Efield) F%FIO_E=-1
-
-    
-    status = fio_set_int_option(FIO_SPECIES, FIO_ELECTRON);
-       
-    
-    status = fio_get_field(isrc, FIO_DENSITY, P%FIO_ne);
-    !status = fio_get_field(isrc, FIO_TEMPERATURE, P%FIO_te);
-
-    !status = fio_set_int_option(FIO_SPECIES, FIO_MAIN_ION);
-    !status = fio_get_field(isrc, FIO_DENSITY, P%FIO_ni);
-
-
-    if (init) then
-       if (.NOT.(params%restart.OR.params%proceed)) then
-          hint_tmp=c_null_ptr
-          x(1)=spp(1)%Ro
-          x(2)=spp(1)%PHIo
-          x(3)=spp(1)%Zo
-
-          status = fio_eval_field(F%FIO_B, x(1),                      &
-               Btmp(1),hint_tmp)
-
-          F%Bo = Btmp(2)
-          F%Eo = 1.0
-          F%Ro = 1.0
-          F%Zo = 1.0
-       end if    
-
-       do ii = 1, params%num_species
-
-          do pp = 1, spp(ii)%ppp
-             status = fio_allocate_search_hint(isrc, spp(ii)%vars%hint(pp))
-             !spp(ii)%vars%hint(pp)=c_null_ptr
-          end do
-
-          spp(ii)%vars%cart = .false.
-       end do
-    end if
+    spp%vars%cart = .false.
 
     if (params%mpi_params%rank .EQ. 0) then
        write(output_unit_write,*) 'Calculate B',F%FIO_B
-       write(output_unit_write,*) 'Calculate E',F%FIO_E
-       write(output_unit_write,*) 'Calculate ne',P%FIO_ne
     end if
        
   END SUBROUTINE initialize_nimrod
   
-  SUBROUTINE initialize_m3d_c1_imp(params,F,P,num_imp,init)
 
+  SUBROUTINE finalize_fio(params, F)
     TYPE(KORC_PARAMS), INTENT(IN)           :: params
     TYPE(FIELDS), INTENT(IN)                :: F
-    TYPE(PROFILES), INTENT(INOUT)              :: P
-    INTEGER, INTENT(IN)				:: num_imp
-    LOGICAL, INTENT(IN)  :: init
-
-    INTEGER                                    :: ii
-    INTEGER                                    :: status
-    INTEGER                                    :: isrc
-    INTEGER,ALLOCATABLE,DIMENSION(:)          :: Zo
-    INTEGER  :: A,Zo1
-
-    !status = fio_open_source(FIO_M3DC1_SOURCE,           &
-    !     TRIM(params%magnetic_field_filename)            &
-    !     // C_NULL_CHAR, isrc)
-
-    isrc=F%isrc
-    
-    status = fio_get_options(isrc)
-       
-    
-    if (.not.F%ReInterp_2x1t) then
-       status = fio_set_int_option(FIO_TIMESLICE, params%time_slice)
-    else
-       status = fio_set_int_option(FIO_TIMESLICE, F%ind_2x1t)
-    end if
-
-    if (init) then
-       ALLOCATE(P%FIO_nimp(num_imp))
-    else
-       do ii=1,num_imp
-          status = fio_close_field(P%FIO_nimp(ii))
-       end do          
-    endif
-       
-    !write(6,*) size(params%Zj)
-    !write(6,*) size(params%Zj(ubound(params%Zj)))
-    Zo=int(params%Zj(ubound(params%Zj)))
-    Zo1=Zo(1)
-
-    if (Zo1.eq.18) then
-       A=40
-    else if (Zo1.eq.10) then
-       A=20
-    else if (Zo1.eq.6) then
-       A=12
-    end if
-    
-    do ii=1,num_imp
-       status = fio_set_int_option(FIO_SPECIES, &
-            FIO_MAKE_SPECIES(A, Zo1, Zo1+1-ii));
-       status = fio_get_field(isrc, FIO_DENSITY, P%FIO_nimp(ii));
-    end do
-
-    if (params%mpi_params%rank .EQ. 0) then
-       do ii=1,num_imp
-          write(output_unit_write,*) 'Calculate nimp_',ii,P%FIO_nimp(ii)
-       end do
-    end if
-       
-  END SUBROUTINE initialize_m3d_c1_imp
-
-  SUBROUTINE finalize_fio(params, F, P)
-    TYPE(KORC_PARAMS), INTENT(IN)           :: params
-    TYPE(FIELDS), INTENT(IN)                :: F
-    TYPE(PROFILES), INTENT(INOUT)              :: P
     INTEGER                                    :: status
     INTEGER                                    :: ii
 
-    status = fio_close_field(F%FIO_B)
-    status = fio_close_field(F%FIO_B+1)
-    if (F%FIO_A.gt.0) then
-       status = fio_close_field(F%FIO_A)
-    endif
-       
-    status = fio_close_field(P%FIO_ne)
-    if (P%FIO_te.gt.0) then
-       status = fio_close_field(P%FIO_te)
-    endif
-    if (P%FIO_ni.gt.0) then
-       status = fio_close_field(P%FIO_ni)
-    endif
-       
-    if (params%collisions) then
-       do ii=1,params%num_impurity_species
-          status = fio_close_field(P%FIO_nimp(ii))
-       end do
-    end if
+    status = fio_close_field(F%FIO_B)       
 
     status=fio_close_source(F%isrc)
     
   end SUBROUTINE FINALIZE_FIO
 
-  
-  FUNCTION FIO_MAKE_SPECIES(m, p, e)
-    INTEGER, INTENT(IN) :: m
-    INTEGER, INTENT(IN) :: p
-    INTEGER, INTENT(IN) :: e
-    INTEGER(C_INT) :: FIO_MAKE_SPECIES
-    
-    FIO_MAKE_SPECIES = e + p*256 + (m-p)*65536
-  END FUNCTION FIO_MAKE_SPECIES
 
-
-END MODULE korc_fio
+END MODULE fio
 #endif

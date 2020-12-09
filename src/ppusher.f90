@@ -46,15 +46,16 @@ contains
     !! Chunk iterator.
     INTEGER(ip),DIMENSION(params%pchunk)    :: tt
     !! time iterator.
-    REAL(rp)  :: Bo
+    REAL(rp)  :: Bo,phi_section
     INTEGER             :: thread_num
 
-    Bo=F%AB%Bo
+    Bo=F%Bo
+    phi_section=params%phi_section
     num_punct=params%num_punctures
     pchunk=params%pchunk
 
     !$OMP PARALLEL DO default(none) &
-    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
+    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
     !$OMP& flagCon,B_R,B_PHI,B_Z,thread_num)
@@ -90,12 +91,10 @@ contains
           
           call advance_eqn_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
 
-          do cc=1_idef,pchunk
-             if (flagCon(cc).eq.0) then
-                write(6,*) thread_num,'trace left domain'
-                exit
-             endif
-          end do
+          if ((pchunk.eq.1).and.(flagCon(1).eq.0)) then
+             write(6,*) thread_num,'trace left domain'
+             exit
+          endif          
           
           !$OMP SIMD
           do cc=1_idef,pchunk
@@ -104,35 +103,38 @@ contains
           enddo
           
           do cc=1_idef,pchunk
-             if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
-
+             if ((Bo>0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
+                
                 !write(6,*) thread_num,'R1',Y_R
                 !write(6,*) thread_num,'PHI1',Y_PHI1
                 !write(6,*) thread_num,'Z1',Y_Z
                 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
                 !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
                 
                 tt(cc)=tt(cc)+1   
-             else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
+             else if ((Bo<0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)< &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
+                if (phi_section==0._rp) phi_section=phi_section+2*C_PI
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
-                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
-                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
-                
                 tt(cc)=tt(cc)+1   
              endif
           enddo
@@ -170,15 +172,15 @@ contains
     !! Chunk iterator.
     INTEGER(ip),DIMENSION(params%pchunk)      :: tt
     !! time iterator.
-    REAL(rp)  :: Bo
+    REAL(rp)  :: Bo,phi_section
 
-    Bo=F%AB%Bo
+    Bo=F%Bo
+    phi_section=params%phi_section
     num_punct=params%num_punctures
     pchunk=params%pchunk
-    tt=1
 
     !$OMP PARALLEL DO default(none) &
-    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
+    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
     !$OMP& flagCon,B_R,B_PHI,B_Z)
@@ -214,23 +216,36 @@ contains
           enddo
 
           do cc=1_idef,pchunk
-             if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
-
+             if ((Bo>0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
+                
+                !write(6,*) thread_num,'R1',Y_R
+                !write(6,*) thread_num,'PHI1',Y_PHI1
+                !write(6,*) thread_num,'Z1',Y_Z
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                
                 tt(cc)=tt(cc)+1   
-             else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
+             else if ((Bo<0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)< &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
+                if (phi_section==0._rp) phi_section=phi_section+2*C_PI
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
@@ -253,6 +268,8 @@ contains
 
   subroutine adv_interp_2DB_top(params,F,spp)
 
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                           :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(INOUT)                                   :: F
@@ -270,20 +287,23 @@ contains
     !! Chunk iterator.
     INTEGER(ip),DIMENSION(params%pchunk) :: tt
     !! time iterator.
-    REAL(rp)  :: Bo
+    REAL(rp)  :: Bo,phi_section
+    INTEGER             :: thread_num
 
-    Bo=F%AB%Bo
+    Bo=F%Bo
+    phi_section=params%phi_section
     num_punct=params%num_punctures
     pchunk=params%pchunk
-    tt=1
 
     !$OMP PARALLEL DO default(none) &
-    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
+    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
-    !$OMP& flagCon,B_R,B_PHI,B_Z)
+    !$OMP& flagCon,B_R,B_PHI,B_Z,thread_num)
     do pp=1_idef,spp%ppp,pchunk
 
+       thread_num = OMP_GET_THREAD_NUM()
+       
        !$OMP SIMD
        do cc=1_idef,pchunk
           tt(cc)=1
@@ -304,9 +324,20 @@ contains
              Y_PHI0(cc)=Y_PHI(cc)
              Y_Z0(cc)=Y_Z(cc)
           end do
+
+          !write(6,*) thread_num,'R0',Y_R0
+          !write(6,*) thread_num,'PHI0',Y_PHI0
+          !write(6,*) thread_num,'Z0',Y_Z0 
           
           call advance_interp_2DB_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
 
+          do cc=1_idef,pchunk
+             if ((pchunk.eq.1).and.(flagCon(cc).eq.0)) then
+                write(6,*) thread_num,'trace left domain'
+                exit
+             endif
+          end do
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_PHI1(cc)=Y_PHI(cc)
@@ -314,23 +345,36 @@ contains
           enddo
 
           do cc=1_idef,pchunk
-             if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
-
+             if ((Bo>0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
+                
+                !write(6,*) thread_num,'R1',Y_R
+                !write(6,*) thread_num,'PHI1',Y_PHI1
+                !write(6,*) thread_num,'Z1',Y_Z
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                
                 tt(cc)=tt(cc)+1   
-             else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
+             else if ((Bo<0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)< &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
+                if (phi_section==0._rp) phi_section=phi_section+2*C_PI
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
@@ -353,6 +397,8 @@ contains
   
   subroutine adv_interp_3DB_top(params,F,spp)
 
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                           :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(INOUT)                                   :: F
@@ -370,20 +416,23 @@ contains
     !! Chunk iterator.
     INTEGER(ip),DIMENSION(params%pchunk)           :: tt
     !! time iterator.
-    REAL(rp)  :: Bo
+    REAL(rp)  :: Bo,phi_section
+    INTEGER             :: thread_num
 
-    Bo=F%AB%Bo
+    Bo=F%Bo
+    phi_section=params%phi_section
     num_punct=params%num_punctures
     pchunk=params%pchunk
-    tt=1
 
     !$OMP PARALLEL DO default(none) &
-    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
+    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
-    !$OMP& flagCon,B_R,B_PHI,B_Z)
+    !$OMP& flagCon,B_R,B_PHI,B_Z,thread_num)
     do pp=1_idef,spp%ppp,pchunk
 
+       thread_num = OMP_GET_THREAD_NUM()
+       
        !$OMP SIMD
        do cc=1_idef,pchunk
           tt(cc)=1
@@ -404,9 +453,18 @@ contains
              Y_PHI0(cc)=Y_PHI(cc)
              Y_Z0(cc)=Y_Z(cc)
           end do
+
+          !write(6,*) thread_num,'R0',Y_R0
+          !write(6,*) thread_num,'PHI0',Y_PHI0
+          !write(6,*) thread_num,'Z0',Y_Z0
           
           call advance_interp_3DB_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
 
+          if ((pchunk.eq.1).and.(flagCon(1).eq.0)) then
+             write(6,*) thread_num,'trace left domain'
+             exit
+          endif 
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_PHI1(cc)=Y_PHI(cc)
@@ -414,29 +472,42 @@ contains
           enddo
 
           do cc=1_idef,pchunk
-             if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
-
+             if ((Bo>0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
+                
+                !write(6,*) thread_num,'R1',Y_R
+                !write(6,*) thread_num,'PHI1',Y_PHI1
+                !write(6,*) thread_num,'Z1',Y_Z
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                
                 tt(cc)=tt(cc)+1   
-             else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
+             else if ((Bo<0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)< &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
+                if (phi_section==0._rp) phi_section=phi_section+2*C_PI
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (2*C_PI-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
              endif
           enddo
-          
+
        end do !timestep iterator
 
        !$OMP SIMD
@@ -455,6 +526,8 @@ contains
 #ifdef FIO
   subroutine adv_fio_top(params,F,spp)
 
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                           :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(INOUT)                                   :: F
@@ -472,21 +545,25 @@ contains
     !! Chunk iterator.
     INTEGER(ip),DIMENSION(params%pchunk)        :: tt
     !! time iterator.
-    REAL(rp)  :: Bo
+    REAL(rp)  :: Bo,phi_section
     TYPE(C_PTR),DIMENSION(params%pchunk) :: hint
+    INTEGER             :: thread_num
 
-    Bo=F%AB%Bo
+    Bo=F%Bo
+    phi_section=params%phi_section
     num_punct=params%num_punctures
     pchunk=params%pchunk
     tt=1
 
     !$OMP PARALLEL DO default(none) &
-    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct) &
+    !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
-    !$OMP& flagCon,B_R,B_PHI,B_Z)
+    !$OMP& flagCon,B_R,B_PHI,B_Z,thread_num,hint)
     do pp=1_idef,spp%ppp,pchunk
 
+       thread_num = OMP_GET_THREAD_NUM()
+       
        !$OMP SIMD
        do cc=1_idef,pchunk
           tt(cc)=1
@@ -495,44 +572,83 @@ contains
           Y_PHI(cc)=spp%vars%Y(pp-1+cc,2)
           Y_Z(cc)=spp%vars%Y(pp-1+cc,3)
 
+          hint(cc)=spp%vars%hint(pp-1+cc)
+
           flagCon(cc)=spp%vars%flagCon(pp-1+cc)
        end do
        !$OMP END SIMD
 
        do while (maxval(tt).le.num_punct)
 
+          do cc=1_idef,pchunk
+             if (mod(tt(cc),num_punct/10).eq.0) then
+                write(6,*) thread_num,tt,cc
+             end if
+          end do
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_R0(cc)=Y_R(cc)
              Y_PHI0(cc)=Y_PHI(cc)
              Y_Z0(cc)=Y_Z(cc)
           end do
+
+          !write(6,*) thread_num,'R0',Y_R0
+          !write(6,*) thread_num,'PHI0',Y_PHI0
+          !write(6,*) thread_num,'Z0',Y_Z0          
+          
+          !write(6,*) phi_section
           
           call advance_fio_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon,hint)
 
+          if ((pchunk.eq.1).and.(flagCon(1).eq.0)) then
+             write(6,*) thread_num,'trace left domain'
+             exit
+          endif 
+          
           !$OMP SIMD
           do cc=1_idef,pchunk
              Y_PHI1(cc)=Y_PHI(cc)
              Y_PHI(cc)=modulo(Y_PHI(cc),2*C_PI)
           enddo
 
-          do cc=1_idef,pchunk
-             if ((Bo>0).and.(Y_PHI(cc)>Y_PHI0(cc))) then
 
+          !write(6,*) Bo
+          !write(6,*) modulo(Y_PHI0(1)-phi_section,2*C_PI)
+          !write(6,*) modulo(Y_PHI0(1)-.1-phi_section,2*C_PI)
+          
+          do cc=1_idef,pchunk
+             if ((Bo>0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
+                
+                !write(6,*) thread_num,'R1',Y_R
+                !write(6,*) thread_num,'PHI1',Y_PHI1
+                !write(6,*) thread_num,'Z1',Y_Z
+                
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
                 spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
-                     (0._rp-Y_PHI0(cc))* &
+                     (phi_section-Y_PHI0(cc))* &
                      (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
+                !write(6,*) thread_num,'R_punct',spp%vars%punct(tt(cc),pp-1+cc,1)
+                !write(6,*) thread_num,'Z_punct',spp%vars%punct(tt(cc),pp-1+cc,2)
+                
                 tt(cc)=tt(cc)+1   
-             else if ((Bo<0).and.(Y_PHI(cc)<Y_PHI0(cc))) then
+             else if ((Bo<0).and. &
+                  (modulo(Y_PHI(cc)-phi_section,2*C_PI)< &
+                  modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
-                spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+(2*C_PI-Y_PHI0)* &
-                     (Y_R-Y_R0)/(Y_PHI1-Y_PHI0)
-                spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+(2*C_PI-Y_PHI0)* &
-                     (Y_Z-Y_Z0)/(Y_PHI1-Y_PHI0)
+                if (phi_section==0._rp) phi_section=phi_section+2*C_PI
+                
+                spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
+                     (phi_section-Y_PHI0(cc))* &
+                     (Y_R(cc)-Y_R0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
+                spp%vars%punct(tt(cc),pp-1+cc,2)=Y_Z0(cc)+ &
+                     (phi_section-Y_PHI0(cc))* &
+                     (Y_Z(cc)-Y_Z0(cc))/(Y_PHI1(cc)-Y_PHI0(cc))
 
                 tt(cc)=tt(cc)+1   
              endif
@@ -577,7 +693,7 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
     REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
 
     REAL(rp) :: ar,R0
@@ -600,9 +716,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k1_R(cc)=dx*B_R(cc)              
-       k1_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k1_Z(cc)=dx*B_Z(cc)    
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k1_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k1_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k1_Z(cc)=dx*B_Z(cc)/Bmag(cc)    
 
        Y_R(cc)=Y0_R(cc)+a1*k1_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a1*k1_PHI(cc)
@@ -614,9 +732,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k2_R(cc)=dx*B_R(cc)              
-       k2_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k2_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k2_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k2_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k2_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a21*k1_R(cc)+a22*k2_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a21*k1_PHI(cc)+a22*k2_PHI(cc)
@@ -628,9 +748,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k3_R(cc)=dx*B_R(cc)              
-       k3_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k3_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k3_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k3_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k3_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a31*k1_R(cc)+a32*k2_R(cc)+a33*k3_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a31*k1_PHI(cc)+a32*k2_PHI(cc)+ &
@@ -643,9 +765,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k4_R(cc)=dx*B_R(cc)              
-       k4_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k4_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k4_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k4_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k4_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a41*k1_R(cc)+a42*k2_R(cc)+a43*k3_R(cc)+ &
             a44*k4_R(cc)
@@ -660,9 +784,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k5_R(cc)=dx*B_R(cc)              
-       k5_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k5_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k5_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k5_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k5_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a51*k1_R(cc)+a52*k2_R(cc)+a53*k3_R(cc)+ &
             a54*k4_R(cc)+a55*k5_R(cc)
@@ -677,9 +803,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k6_R(cc)=dx*B_R(cc)              
-       k6_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k6_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k6_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k6_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k6_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+b1*k1_R(cc)+b2*k2_R(cc)+ &
             b3*k3_R(cc)+b4*k4_R(cc)+b5*k5_R(cc)+b6*k6_R(cc)
@@ -730,7 +858,7 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
     REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
 
     pchunk=params%pchunk
@@ -748,9 +876,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k1_R(cc)=dx*B_R(cc)              
-       k1_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k1_Z(cc)=dx*B_Z(cc)    
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k1_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k1_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k1_Z(cc)=dx*B_Z(cc)/Bmag(cc)      
 
        Y_R(cc)=Y0_R(cc)+a1*k1_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a1*k1_PHI(cc)
@@ -762,9 +892,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k2_R(cc)=dx*B_R(cc)              
-       k2_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k2_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k2_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k2_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k2_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a21*k1_R(cc)+a22*k2_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a21*k1_PHI(cc)+a22*k2_PHI(cc)
@@ -776,9 +908,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k3_R(cc)=dx*B_R(cc)              
-       k3_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k3_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k3_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k3_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k3_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a31*k1_R(cc)+a32*k2_R(cc)+a33*k3_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a31*k1_PHI(cc)+a32*k2_PHI(cc)+ &
@@ -791,9 +925,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k4_R(cc)=dx*B_R(cc)              
-       k4_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k4_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k4_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k4_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k4_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a41*k1_R(cc)+a42*k2_R(cc)+a43*k3_R(cc)+ &
             a44*k4_R(cc)
@@ -808,9 +944,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k5_R(cc)=dx*B_R(cc)              
-       k5_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k5_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k5_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k5_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k5_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a51*k1_R(cc)+a52*k2_R(cc)+a53*k3_R(cc)+ &
             a54*k4_R(cc)+a55*k5_R(cc)
@@ -825,9 +963,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k6_R(cc)=dx*B_R(cc)              
-       k6_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k6_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k6_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k6_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k6_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+b1*k1_R(cc)+b2*k2_R(cc)+ &
             b3*k3_R(cc)+b4*k4_R(cc)+b5*k5_R(cc)+b6*k6_R(cc)
@@ -876,7 +1016,7 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
     REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
 
     pchunk=params%pchunk
@@ -894,9 +1034,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k1_R(cc)=dx*B_R(cc)              
-       k1_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k1_Z(cc)=dx*B_Z(cc)    
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k1_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k1_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k1_Z(cc)=dx*B_Z(cc)/Bmag(cc)       
 
        Y_R(cc)=Y0_R(cc)+a1*k1_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a1*k1_PHI(cc)
@@ -908,9 +1050,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k2_R(cc)=dx*B_R(cc)              
-       k2_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k2_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k2_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k2_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k2_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a21*k1_R(cc)+a22*k2_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a21*k1_PHI(cc)+a22*k2_PHI(cc)
@@ -922,9 +1066,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k3_R(cc)=dx*B_R(cc)              
-       k3_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k3_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k3_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k3_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k3_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a31*k1_R(cc)+a32*k2_R(cc)+a33*k3_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a31*k1_PHI(cc)+a32*k2_PHI(cc)+ &
@@ -937,9 +1083,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k4_R(cc)=dx*B_R(cc)              
-       k4_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k4_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k4_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k4_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k4_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a41*k1_R(cc)+a42*k2_R(cc)+a43*k3_R(cc)+ &
             a44*k4_R(cc)
@@ -954,9 +1102,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k5_R(cc)=dx*B_R(cc)              
-       k5_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k5_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k5_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k5_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k5_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a51*k1_R(cc)+a52*k2_R(cc)+a53*k3_R(cc)+ &
             a54*k4_R(cc)+a55*k5_R(cc)
@@ -971,9 +1121,11 @@ contains
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k6_R(cc)=dx*B_R(cc)              
-       k6_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k6_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k6_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k6_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k6_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+b1*k1_R(cc)+b2*k2_R(cc)+ &
             b3*k3_R(cc)+b4*k4_R(cc)+b5*k5_R(cc)+b6*k6_R(cc)
@@ -999,6 +1151,9 @@ contains
   end subroutine advance_interp_2DB_vars
   
   subroutine advance_interp_3DB_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
+
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                              :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(IN)                                 :: F
@@ -1022,8 +1177,11 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
     REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
+    INTEGER             :: thread_num
+
+    thread_num = OMP_GET_THREAD_NUM()
 
     pchunk=params%pchunk
     dx=params%dx
@@ -1036,13 +1194,19 @@ contains
     end do
     !$OMP END SIMD
 
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
+    !write(6,*) thread_num,'BR0',B_R
+    !write(6,*) thread_num,'BPHI0',B_PHI
+    !write(6,*) thread_num,'BZ0',B_Z
+    
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k1_R(cc)=dx*B_R(cc)              
-       k1_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k1_Z(cc)=dx*B_Z(cc)    
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k1_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k1_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k1_Z(cc)=dx*B_Z(cc)/Bmag(cc) 
 
        Y_R(cc)=Y0_R(cc)+a1*k1_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a1*k1_PHI(cc)
@@ -1050,13 +1214,15 @@ contains
     end do
     !$OMP END SIMD
     
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k2_R(cc)=dx*B_R(cc)              
-       k2_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k2_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k2_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k2_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k2_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a21*k1_R(cc)+a22*k2_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a21*k1_PHI(cc)+a22*k2_PHI(cc)
@@ -1064,13 +1230,15 @@ contains
     end do
     !$OMP END SIMD
 
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k3_R(cc)=dx*B_R(cc)              
-       k3_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k3_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k3_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k3_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k3_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a31*k1_R(cc)+a32*k2_R(cc)+a33*k3_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a31*k1_PHI(cc)+a32*k2_PHI(cc)+ &
@@ -1079,13 +1247,15 @@ contains
     end do
     !$OMP END SIMD
 
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k4_R(cc)=dx*B_R(cc)              
-       k4_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k4_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k4_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k4_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k4_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a41*k1_R(cc)+a42*k2_R(cc)+a43*k3_R(cc)+ &
             a44*k4_R(cc)
@@ -1096,13 +1266,15 @@ contains
     end do
     !$OMP END SIMD
 
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k5_R(cc)=dx*B_R(cc)              
-       k5_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k5_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k5_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k5_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k5_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a51*k1_R(cc)+a52*k2_R(cc)+a53*k3_R(cc)+ &
             a54*k4_R(cc)+a55*k5_R(cc)
@@ -1113,13 +1285,15 @@ contains
     end do
     !$OMP END SIMD
 
-    call interp_2DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
+    call interp_3DB_p(pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,flagCon)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k6_R(cc)=dx*B_R(cc)              
-       k6_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k6_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k6_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k6_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k6_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+b1*k1_R(cc)+b2*k2_R(cc)+ &
             b3*k3_R(cc)+b4*k4_R(cc)+b5*k5_R(cc)+b6*k6_R(cc)
@@ -1146,6 +1320,9 @@ contains
 
 #ifdef FIO
   subroutine advance_fio_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon,hint)
+
+    use omp_lib
+    
     TYPE(KORC_PARAMS), INTENT(INOUT)                              :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(IN)                                 :: F
@@ -1169,10 +1346,13 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
     REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
-    TYPE(C_PTR),DIMENSION(params%pchunk),INTENT(IN) :: hint
+    TYPE(C_PTR),DIMENSION(params%pchunk),INTENT(INOUT) :: hint
+    INTEGER             :: thread_num
 
+    thread_num = OMP_GET_THREAD_NUM()
+    
     pchunk=params%pchunk
     dx=params%dx
 
@@ -1185,13 +1365,19 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-       B_X,B_Y,B_Z,flagCon,hint)  
+       B_R,B_PHI,B_Z,flagCon,hint)  
 
+    !write(6,*) thread_num,'BR0',B_R
+    !write(6,*) thread_num,'BPHI0',B_PHI
+    !write(6,*) thread_num,'BZ0',B_Z
+    
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k1_R(cc)=dx*B_R(cc)              
-       k1_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k1_Z(cc)=dx*B_Z(cc)    
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k1_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k1_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k1_Z(cc)=dx*B_Z(cc)/Bmag(cc)     
 
        Y_R(cc)=Y0_R(cc)+a1*k1_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a1*k1_PHI(cc)
@@ -1200,13 +1386,15 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-       B_X,B_Y,B_Z,flagCon,hint)
+       B_R,B_PHI,B_Z,flagCon,hint)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k2_R(cc)=dx*B_R(cc)              
-       k2_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k2_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k2_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k2_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k2_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a21*k1_R(cc)+a22*k2_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a21*k1_PHI(cc)+a22*k2_PHI(cc)
@@ -1215,13 +1403,15 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-       B_X,B_Y,B_Z,flagCon,hint)
+       B_R,B_PHI,B_Z,flagCon,hint)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k3_R(cc)=dx*B_R(cc)              
-       k3_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k3_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k3_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k3_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k3_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a31*k1_R(cc)+a32*k2_R(cc)+a33*k3_R(cc)
        Y_PHI(cc)=Y0_PHI(cc)+a31*k1_PHI(cc)+a32*k2_PHI(cc)+ &
@@ -1231,13 +1421,15 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-       B_X,B_Y,B_Z,flagCon,hint)
+       B_R,B_PHI,B_Z,flagCon,hint)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k4_R(cc)=dx*B_R(cc)              
-       k4_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k4_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k4_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k4_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k4_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a41*k1_R(cc)+a42*k2_R(cc)+a43*k3_R(cc)+ &
             a44*k4_R(cc)
@@ -1249,14 +1441,15 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-         B_X,B_Y,B_Z,flagCon,hint)
+         B_R,B_PHI,B_Z,flagCon,hint)
         
-    call calculate_magnetic_field
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k5_R(cc)=dx*B_R(cc)              
-       k5_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k5_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k5_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k5_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k5_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+a51*k1_R(cc)+a52*k2_R(cc)+a53*k3_R(cc)+ &
             a54*k4_R(cc)+a55*k5_R(cc)
@@ -1268,13 +1461,15 @@ contains
     !$OMP END SIMD
 
     call get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
-       B_X,B_Y,B_Z,flagCon,hint)
+       B_R,B_PHI,B_Z,flagCon,hint)
 
     !$OMP SIMD
     do cc=1_idef,pchunk
-       k6_R(cc)=dx*B_R(cc)              
-       k6_PHI(cc)=dx*B_PHI(cc)/Y_R(cc)    
-       k6_Z(cc)=dx*B_Z(cc)
+       Bmag(cc)=sqrt(B_R(cc)*B_R(cc)+B_PHI(cc)*B_PHI(cc)+B_Z(cc)*B_Z(cc))
+       
+       k6_R(cc)=dx*B_R(cc)/Bmag(cc)              
+       k6_PHI(cc)=dx*B_PHI(cc)/(Y_R(cc)*Bmag(cc))    
+       k6_Z(cc)=dx*B_Z(cc)/Bmag(cc)   
 
        Y_R(cc)=Y0_R(cc)+b1*k1_R(cc)+b2*k2_R(cc)+ &
             b3*k3_R(cc)+b4*k4_R(cc)+b5*k5_R(cc)+b6*k6_R(cc)

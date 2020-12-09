@@ -1212,6 +1212,9 @@ CONTAINS
        dset = TRIM(gname) // "/spatial_distribution"
        call save_string_parameter(h5file_id,dset,(/spp%spatial_distrib/))
 
+       dset = TRIM(gname) // "/Y"
+       call rsave_2d_array_to_hdf5(h5file_id, dset, spp%vars%Y)
+       
        call h5gclose_f(group_id, h5error)
 
 

@@ -27,12 +27,9 @@ CONTAINS
     !! MPI error status
 
     !! 11: hpc:set_paths
-    !! 13: korc_input:read_namelist
-    !! 14: korc_hpc:laod_particle_ic
-    !! 15: korc_interp:interp_fields
-    !! 16: korc_interp:interp_profiles
-    !! 18: korc_fields:initialize_fields
-    !! 19: korc_spatial_distribution:initial_spatial_distribution
+    !! 12: spatial_distribution: initial_spatial_distribution
+    !! 13: input:read_namelist
+    !! 18: fields:initialize_fields
 
     flush(output_unit_write)
     
