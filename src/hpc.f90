@@ -77,9 +77,16 @@ CONTAINS
 
        write(output_unit_write,'(/,"* * * * * * * GIT INFO * * * * * * *")')
 
-
-       call execute_command_line("/Users/21b/Desktop/PoinBabel/src/get_git_details.sh",exitstat=exei)
-
+#ifdef MAC
+       !write(6,*) 'MAC'
+       call execute_command_line("/Users/21b/Desktop/PoinBabel/src/get_git_details.sh", &
+            exitstat=exei)
+#elif CORI
+       !write(6,*) 'CORI'
+       call execute_command_line("/global/cfs/cdirs/m3236/PoinBabel/src/get_git_details.sh", &
+            exitstat=exei)
+#endif
+       
        IF (exei/=0) then
           write(6,*) 'Error executing get_git_details.sh'
           call PB_abort(11)

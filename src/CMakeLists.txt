@@ -21,6 +21,12 @@ list (APPEND poinbabel_sources
 add_executable (xpoinbabel ${poinbabel_sources})
 set_property(TARGET xpoinbabel PROPERTY LINKER_LANGUAGE Fortran)
 
+option (CORI_DIR "Use Cori directories" OFF)
+if (${CORI_DIR})
+    add_definitions (-DCORI)
+else ()
+    add_definitions (-DMAC)
+endif ()
 
 target_link_libraries (xpoinbabel ${MPI_Fortran_LIBRARIES})
 target_link_libraries (xpoinbabel ${HDF5_LIBRARIES})
