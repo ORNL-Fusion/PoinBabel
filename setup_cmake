@@ -93,7 +93,6 @@ then
 	  -DNIMLAP_LIBRARIES=/Users/21b/Desktop/NIMROD/NIMUW/externals/liblapack_dummy.a \
 	  -DNIMSLU_LIBRARIES=/Users/21b/Desktop/NIMROD/NIMUW/externals/libsslu_dummy.a \
 	  -DNIMLUD_LIBRARIES=/Users/21b/Desktop/NIMROD/NIMUW/externals/libslud_dummy.a \
-	  -DCMAKE_HDF5_DIR=/opt/local/bin \
 	  -DHDF5_DIR=/opt/local \
     
 elif [ $MACHINE_ID == "cori01"   ] || \

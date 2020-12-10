@@ -1260,7 +1260,7 @@ CONTAINS
           attr = "Poloidal magnetic field in T"
           call save_to_hdf5(h5file_id,dset,F%AB%Bpo,attr)
 
-       else if (params%field_model(1:8) .EQ. 'EXTERNAL') then
+       else if (params%field_model .EQ. 'PSPLINE') then
           ALLOCATE(attr_array(1))
 
           dset = TRIM(gname) // "/dims"
