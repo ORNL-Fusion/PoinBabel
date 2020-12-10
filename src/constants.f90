@@ -1,8 +1,8 @@
 !> @brief Module containing physical and mathematical constants to be used in KORC.
 !! @details In this module we define the constant parameters to be used in KORC. Notice that the numerical precision of these quantities is '_rp', see korc_types.f90.
 !! Any new constant needs to be compliant with the numerical precision used in KORC.
-module constants
-  USE types
+module PB_constants
+  USE PB_types
 
   IMPLICIT NONE
 
@@ -21,4 +21,4 @@ module constants
   REAL(rp), PARAMETER :: C_a = 1._rp/137._rp !< Fine-structure constant
   
   
-end module constants
+end module PB_constants

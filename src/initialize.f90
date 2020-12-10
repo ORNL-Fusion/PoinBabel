@@ -1,14 +1,14 @@
-module initialize
+module PB_initialize
   !! @note Module with subroutines to load simulation parameters 
   !! and to define the time step in the simulation.@endnote
-  use types
-  use constants
-  use hpc
+  use PB_types
+  use PB_constants
+  use PB_hpc
   use PB_HDF5
-  use field
-  use spatial_distribution
-  use coords
-  use input
+  use PB_fields
+  use PB_spatial_distribution
+  use PB_coords
+  use PB_input
 
   IMPLICIT NONE
 
@@ -185,4 +185,4 @@ CONTAINS
 
   end subroutine set_up_particles_ic
 
-end module initialize
+end module PB_initialize

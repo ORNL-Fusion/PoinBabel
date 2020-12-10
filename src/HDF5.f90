@@ -5,9 +5,9 @@
 !! subroutines without having to deal with the sometimes cumbersome details
 !! of the HDF5 API.
 module PB_HDF5
-  use hpc
-  use types
-  use constants
+  use PB_hpc
+  use PB_types
+  use PB_constants
   use HDF5
 
   IMPLICIT NONE

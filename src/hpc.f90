@@ -1,5 +1,5 @@
-module hpc
-  use types
+module PB_hpc
+  use PB_types
   use omp_lib
   use mpi
 
@@ -374,4 +374,4 @@ CONTAINS
     end if
   end subroutine initialize_communications
 
-end module hpc
+end module PB_hpc

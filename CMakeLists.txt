@@ -1,4 +1,10 @@
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 3.13)
+
+cmake_policy(VERSION 3.13)
+
+if(CMP0074)
+   cmake_policy(SET CMP0074 NEW)
+endif()
 
 project (poinbabel_proj C CXX Fortran)
 
@@ -29,7 +35,7 @@ find_package (HDF5 REQUIRED COMPONENTS Fortran)
 include_directories (${HDF5_INCLUDE_DIRS})
 
 #  Configure EZspline
-option (USE_FIO "Use FIO interpolation support" OFF)
+option (USE_PSPLINE "Use PSPLINE interpolation support" OFF)
 if (${USE_PSPLINE})
     include_directories (${EZSpline_INCLUDE_PATH})
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${EZSpline_LINK_FLAGS}")
@@ -46,4 +52,11 @@ endif ()
 
 add_subdirectory (src)
 
+#  Add machine dependent definition for finding included scripts
+option (CORI_DIR "Use Cori directories" OFF)
+if (${CORI_DIR})
+    add_definitions (-DCORI)
+else ()
+    add_definitions (-DMAC)	     
+endif ()
 

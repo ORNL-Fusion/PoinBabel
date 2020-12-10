@@ -1,9 +1,9 @@
-module finalize
+module PB_finalize
   !! @note Module containing subroutines to terminate parallel
   !! communications and free memory.
-  use types
-  use field
-  use hpc
+  use PB_types
+  use PB_fields
+  use PB_hpc
 
   IMPLICIT NONE
 
@@ -51,4 +51,4 @@ CONTAINS
     call DEALLOCATE_FIELDS_ARRAYS(F)
   end subroutine deallocate_variables
 
-end module finalize
+end module PB_finalize

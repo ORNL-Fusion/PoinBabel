@@ -1,24 +1,27 @@
-module interp
+module PB_interp
   !! @note Module containing functions and subroutines for performing 
   !! interpolations using the PSPLINE library. @endnote
   !! For a detailed documentation of the PSPLINE library we refer the 
   !! user to "https://w3.pppl.gov/ntcc/PSPLINE/".
-  use types
-  use hpc
-  use constants
+  use PB_types
+  use PB_hpc
+  use PB_constants
 
+#ifdef PSPLINE
   use EZspline_obj	! psplines module
-  use EZspline		! psplines module
-
+  use EZspline          ! psplines module
+#endif
+  
 #ifdef FIO
-  use fio
+  use PB_fio
 #endif
 
   !$ use OMP_LIB
 
   IMPLICIT NONE
 
-
+#ifdef PSPLINE
+  
 #ifdef DOUBLE_PRECISION
 
 
@@ -185,22 +188,12 @@ module interp
   INTEGER                                        :: ezerr
   !! Error status during PSPLINE interpolations.
 
-
-
-  PUBLIC :: interp_2DB_p,&
-       interp_3DB_p,&
-       initialize_fields_interpolant,&
-       finalize_interpolants,&
-#ifdef FIO
-       get_fio_magnetic_fields_p,&
 #endif
-       calculate_magnetic_field_p
 
-  PRIVATE :: check_if_in_fields_domain_p
 
 CONTAINS
 
-
+#ifdef PSPLINE
   subroutine initialize_fields_interpolant(params,F)
     !! @note Subroutine that initializes fields interpolants. @endnote
     !! This subroutine initializes either 2-D or 3-D PSPLINE interpolants
@@ -572,7 +565,7 @@ CONTAINS
        end if
     end if
   end subroutine finalize_interpolants
-
+#endif
 
 #ifdef FIO
   subroutine get_fio_magnetic_fields_p(params,F,Y_R,Y_PHI,Y_Z, &
@@ -618,4 +611,4 @@ CONTAINS
 #endif
 
 
-end module interp
+end module PB_interp

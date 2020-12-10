@@ -1,8 +1,8 @@
-module coords
+module PB_coords
   !! @note Module containing subroutines to calculate the position of
   !! the simulated particles in toroidal and cylindrical coordinates. @endnote
-  use types
-  use constants
+  use PB_types
+  use PB_constants
 
   IMPLICIT NONE
 
@@ -29,4 +29,4 @@ CONTAINS
 
   end subroutine cyl_check_if_confined_p
   
-end module coords
+end module PB_coords

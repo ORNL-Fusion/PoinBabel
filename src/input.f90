@@ -1,8 +1,8 @@
 module PB_input
   !! @note Module with subroutines to read in all namelists in supplied
   !! input file and broadcast to all mpi processes.
-  USE types
-  USE hpc
+  USE PB_types
+  USE PB_hpc
   
   IMPLICIT NONE
 

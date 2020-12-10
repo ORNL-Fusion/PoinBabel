@@ -1,10 +1,10 @@
-module field
+module PB_fields
   !! @note Module containing subroutines to initialize externally
   !! generated fields, and to calculate the electric and magnetic
   !! fields when using an analytical model. @endnote
-  use types
-  use hpc
-  use interp
+  use PB_types
+  use PB_hpc
+  use PB_interp
   use PB_HDF5
   USE PB_input
 
@@ -565,4 +565,4 @@ CONTAINS
     if (ALLOCATED(F%FLAG2D)) DEALLOCATE(F%FLAG2D)
     if (ALLOCATED(F%FLAG3D)) DEALLOCATE(F%FLAG3D)
   end subroutine DEALLOCATE_FIELDS_ARRAYS
-end module field
+end module PB_fields

@@ -4,10 +4,10 @@
 !  @brief Interface for the fio interpolation library.
 !*******************************************************************************
 
-MODULE fio
+MODULE PB_fio
   USE, INTRINSIC :: iso_c_binding
-  USE types
-  USE input
+  USE PB_types
+  USE PB_input
   USE PB_HDF5
   USE mpi
 
@@ -352,5 +352,5 @@ CONTAINS
   end SUBROUTINE FINALIZE_FIO
 
 
-END MODULE fio
+END MODULE PB_fio
 #endif

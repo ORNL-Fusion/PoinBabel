@@ -4,17 +4,17 @@ program main
   !! Also, it contains the variables that control
   !! the behavior of the core of KORC and all other external/optional modules.
 
-  use types
-  use field
-  use hpc
+  use PB_types
+  use PB_fields
+  use PB_hpc
   use PB_HDF5
-  use ppusher
-  use interp
-  use initialize
-  use finalize
+  use PB_ppusher
+  use PB_interp
+  use PB_initialize
+  use PB_finalize
   use PB_input
 #ifdef FIO
-  use fio
+  use PB_fio
 #endif
   
   implicit none
@@ -122,8 +122,10 @@ program main
   if (params%mpi_params%rank .EQ. 0) then
      flush(output_unit_write)
   end if
-  
+
+#ifdef PSPLINE
   call initialize_fields_interpolant(params,F)
+#endif
   !! <h4>15\. Initialize Fields Interpolant</h4>
   !!
   !! Subroutine [[initialize_fields_interpolant]] in [[korc_interp]] calls
@@ -172,14 +174,18 @@ program main
 
   if (params%field_model.eq.'ANALYTICAL') then     
      call adv_eqn_top(params,F,spp)
-  else if ((params%field_model.eq.'PSPLINE').and.(F%Bflux)) then
-     call adv_interp_psi_top(params,F,spp)
-  else if ((params%field_model.eq.'PSPLINE').and. &
-       (F%Bfield.and.F%axisymmetric_fields)) then
-     call adv_interp_2DB_top(params,F,spp)
-  else if ((params%field_model.eq.'PSPLINE').and. &
-       (F%Bfield.and.(.not.F%axisymmetric_fields))) then
-     call adv_interp_3DB_top(params,F,spp)
+  else if (params%field_model.eq.'PSPLINE') then
+#ifdef PSPLINE
+     if (F%Bflux) then
+        call adv_interp_psi_top(params,F,spp)
+     else if (F%Bfield.and.F%axisymmetric_fields) then
+        call adv_interp_2DB_top(params,F,spp)
+     else if (F%Bfield.and.(.not.F%axisymmetric_fields)) then
+        call adv_interp_3DB_top(params,F,spp)
+     endif
+#else
+     write(6,*) 'Turn on PSPLINE!'
+#endif     
   else if ((params%field_model.eq.'NIMROD').or. &
        (params%field_model.eq.'M3D_C1')) then
 #ifdef FIO
@@ -196,9 +202,10 @@ program main
   ! * * * FINALIZING SIMULATION * * * 
   call finalize_HDF5()
 
-  
+#ifdef PSPLINE
   call finalize_interpolants(params)
-
+#endif
+  
 #ifdef FIO
   if (TRIM(params%field_model) .eq. 'M3D_C1'.or. &
       TRIM(params%field_model) .eq. 'NIMROD') then

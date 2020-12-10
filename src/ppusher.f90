@@ -1,27 +1,14 @@
-module ppusher
+module PB_ppusher
   !! @note Module with subroutines for advancing the particles' position and
   !! velocity in the simulations. @endnote
-  use types
-  use field
-  use interp
-  use hpc
-  use coords
-  use constants
+  use PB_types
+  use PB_fields
+  use PB_interp
+  use PB_hpc
+  use PB_coords
+  use PB_constants
 
   IMPLICIT NONE
-
-  PUBLIC :: adv_eqn_top,&
-       adv_interp_psi_top,&
-       adv_interp_2DB_top,&
-       adv_interp_3DB_top,&
-#ifdef FIO
-       adv_fio_top,&
-       advance_fio_vars,&
-#endif
-       advance_eqn_vars,&
-       advance_interp_psi_vars,&
-       advance_interp_2DB_vars,&
-       advance_interp_3DB_vars
 
 contains
 
@@ -153,6 +140,7 @@ contains
 
   end subroutine adv_eqn_top
 
+#ifdef PSPLINE
   subroutine adv_interp_psi_top(params,F,spp)
 
     TYPE(KORC_PARAMS), INTENT(INOUT)                           :: params
@@ -521,7 +509,7 @@ contains
     !$OMP END PARALLEL DO
 
   end subroutine adv_interp_3DB_top
-
+#endif
 
 #ifdef FIO
   subroutine adv_fio_top(params,F,spp)
@@ -580,11 +568,11 @@ contains
 
        do while (maxval(tt).le.num_punct)
 
-          do cc=1_idef,pchunk
-             if (mod(tt(cc),num_punct/10).eq.0) then
-                write(6,*) thread_num,tt,cc
-             end if
-          end do
+          !do cc=1_idef,pchunk
+          !   if (mod(tt(cc),num_punct/10).eq.0) then
+          !      write(6,*) thread_num,tt,cc
+          !   end if
+          !end do
           
           !$OMP SIMD
           do cc=1_idef,pchunk
@@ -834,6 +822,7 @@ contains
 
   end subroutine advance_eqn_vars
 
+#ifdef PSPLINE
   subroutine advance_interp_psi_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
     TYPE(KORC_PARAMS), INTENT(INOUT)                              :: params
     !! Core KORC simulation parameters.
@@ -1317,7 +1306,8 @@ contains
     !$OMP END SIMD
 
   end subroutine advance_interp_3DB_vars
-
+#endif
+  
 #ifdef FIO
   subroutine advance_fio_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon,hint)
 
@@ -1497,4 +1487,4 @@ contains
 
 
 
-end module ppusher
+end module PB_ppusher

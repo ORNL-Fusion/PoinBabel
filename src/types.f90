@@ -1,4 +1,4 @@
-module types
+module PB_types
   !! @note Module containing the definition of KORC derived types and
   !! KORC variables, the building blocks of the code. @endnote
 #ifdef FIO
@@ -395,4 +395,4 @@ module types
      
   END TYPE FIELDS
 
-end module types
+end module PB_types

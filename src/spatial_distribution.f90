@@ -1,7 +1,7 @@
-MODULE spatial_distribution
+MODULE PB_spatial_distribution
   !! @note Module with subroutines for generating the initial spatial distribution 
   !! of the different partciles' species in the simulation. @endnote
-  USE types
+  USE PB_types
   USE PB_input
 
   IMPLICIT NONE
@@ -97,4 +97,4 @@ subroutine intitial_spatial_distribution(params,spp,F)
 end subroutine intitial_spatial_distribution
 
 
-END MODULE spatial_distribution
+END MODULE PB_spatial_distribution
