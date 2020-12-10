@@ -120,6 +120,8 @@ CONTAINS
     spp%spatial_distrib = TRIM(spatial_distrib)
 
     spp%Xtrace = Xtrace
+    spp%Rgrid=Rgrid
+    spp%Zgrid=Zgrid
 
     ALLOCATE( spp%vars%punct(params%num_punctures,spp%ppp,2))
     ALLOCATE( spp%vars%Y(spp%ppp,3) )

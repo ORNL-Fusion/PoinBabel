@@ -22,15 +22,20 @@ subroutine intitial_spatial_distribution(params,spp,F)
   !! simulation variables of the different species in the simulation.
   TYPE(FIELDS), INTENT(IN)                                   :: F
   !! An instance of the KORC derived type FIELDS.
-  INTEGER :: ii,np,num_part_in,ios
-  REAL(rp) :: Rbuff,phi_start,R_tmp,Z_tmp,rmin,rmax,Ro
+  INTEGER :: ii,jj,np,num_part_in,ios,nR,nZ
+  REAL(rp) :: Rbuff,phi_start,R_tmp,Z_tmp,rmin,rmax,Ro,zmin,zmax,Zbuff
   INTEGER, PARAMETER :: pos_file = 102
 
   rmax=params%rmax
   rmin=params%rmin
+  zmax=params%zmax
+  zmin=params%zmin
   Ro=rmin+(rmax-rmin)/2
   Rbuff=(rmax-rmin)/20._rp
+  Zbuff=(zmax-zmin)/20._rp
   np=params%mpi_params%nmpi*spp%ppp
+  nR=spp%Rgrid
+  nZ=spp%Zgrid
   
   SELECT CASE (TRIM(spp%spatial_distrib))
   CASE ('TRACER')
@@ -78,15 +83,21 @@ subroutine intitial_spatial_distribution(params,spp,F)
 !        write(6,'(F7.2)') spp%vars%Y(ii,2)
 !        write(6,'(F8.5)') spp%vars%Y(ii,3)
      end do
-
-
      
      if (num_part_in.lt.np) then
         do ii=num_part_in+1,np
                spp%vars%flagCon(ii) = 0_is
         enddo        
      endif
-     
+  CASE ('GRID')
+     do ii=1,nR
+        do jj=1,nZ           
+           spp%vars%Y(nR*(ii-1)+jj,1)=(rmin+Rbuff)+ &
+                (rmax-2._rp*Rbuff-rmin)*(ii-1)/(nR-1)
+           spp%vars%Y(nR*(ii-1)+jj,3)=(zmin+Zbuff)+ &
+                (zmax-2._rp*Zbuff-zmin)*(jj-1)/(nZ-1)
+        enddo
+     enddo          
   CASE DEFAULT
      spp%vars%Y(:,1)=spp%Xtrace(1)
      spp%vars%Y(:,2)=spp%Xtrace(2)

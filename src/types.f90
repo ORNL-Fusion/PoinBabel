@@ -216,6 +216,7 @@ module PB_types
      !! each electron species.
      REAL(rp),DIMENSION(3) :: Xtrace
      !! Initial position in Cartesian coordinates for tracer particle
+     INTEGER :: Rgrid,Zgrid
   END TYPE SPECIES
 
 

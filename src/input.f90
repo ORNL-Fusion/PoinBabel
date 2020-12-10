@@ -46,6 +46,7 @@ module PB_input
     ! Initial position of tracer particle for debugging with
     ! spatial_distribution='TRACER'
   CHARACTER(30) :: position_filename = 'positions.dat'
+  INTEGER :: Rgrid,Zgrid
 
   !! -----------------------------------------------
   !! analytical_fields_params
@@ -94,7 +95,8 @@ CONTAINS
     NAMELIST /input_parameters/ field_model,magnetic_field_filename, &
          num_punctures,dx,HDF5_error_handling,time_slice,rmax, &
          rmin,zmax,zmin,pchunk,phi_section
-    NAMELIST /plasma_species/ ppp,spatial_distrib,Xtrace,position_filename
+    NAMELIST /plasma_species/ ppp,spatial_distrib,Xtrace,position_filename, &
+         Rgrid,Zgrid
     NAMELIST /analytical_fields_params/ Bo,minor_radius,major_radius,&
          qa,qo,current_direction
     NAMELIST /externalPlasmaModel/ Bfield, Bflux,axisymmetric_fields,psip_conv
