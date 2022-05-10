@@ -30,6 +30,7 @@ CONTAINS
     !! 12: spatial_distribution: initial_spatial_distribution
     !! 13: input:read_namelist
     !! 18: fields:initialize_fields
+    !! 19: ppusher::adv_interp_mars_top
 
     flush(output_unit_write)
     
@@ -65,6 +66,10 @@ CONTAINS
 
        OPEN(UNIT=output_unit_write, &
             FILE=TRIM(params%path_to_outputs)//"output.out", &
+            STATUS='UNKNOWN',FORM='FORMATTED',POSITION='REWIND')
+
+       OPEN(UNIT=orbit_unit_write, &
+            FILE=TRIM(params%path_to_outputs)//"orbit.out", &
             STATUS='UNKNOWN',FORM='FORMATTED',POSITION='REWIND')
        
        write(output_unit_write,'(/,"* * * * * PATHS * * * * *")')

@@ -145,19 +145,24 @@ CONTAINS
 
        
 !    CASE('PSPLINE')
-    else if (params%field_model(1:7).eq.'PSPLINE') then
+    else if ((params%field_model.eq.'PSPLINE').or. &
+         (params%field_model.eq.'MARS')) then
 
        F%Bfield = Bfield
        F%Bflux = Bflux
+       F%B1field = B1field
        F%axisymmetric_fields = axisymmetric_fields
        F%psip_conv=psip_conv
-
+       F%MARS_AMP_Scale=MARS_AMP_Scale
+       F%stel_sym=stel_sym
+       F%nsymm=nsymm
        
        call load_dim_data_from_hdf5(params,F)
        !sets F%dims for 2D or 3D data
 
        
-       call which_fields_in_file(params,F%Bfield_in_file,F%Bflux_in_file)
+       call which_fields_in_file(params,F%Bfield_in_file,F%Bflux_in_file, &
+            F%B1field_in_file)
 
        
        if (F%Bflux.AND..NOT.F%Bflux_in_file) then
@@ -169,23 +174,32 @@ CONTAINS
           write(output_unit_write,'("ERROR: Magnetic field to be used but no data in file!")')
           call PB_ABORT(18)
        end if
-       
 
-       if (F%axisymmetric_fields) then
-          call ALLOCATE_2D_FIELDS_ARRAYS(params,F,F%Bfield,F%Bflux)
+       if (F%B1field.AND..NOT.F%B1field_in_file) then
+          write(output_unit_write,'("ERROR: Magnetic perturbation field to be used but no data in file!")')
+          call PB_ABORT(18)
+       end if
+       
+       
+       if (F%axisymmetric_fields.or.F%B1field) then
+          call ALLOCATE_2D_FIELDS_ARRAYS(params,F,F%Bfield,F%Bflux,F%B1field)
        else
           call ALLOCATE_3D_FIELDS_ARRAYS(params,F,F%Bfield)          
        end if
        !allocates 2D or 3D data arrays (fields and spatial)
        
-       
        call load_field_data_from_hdf5(params,F)
-                   
+       
        if (params%mpi_params%rank .EQ. 0) then
 
-          write(output_unit_write,'("PSPLINE")')
+          if (params%field_model.eq.'PSPLINE') then
+             write(output_unit_write,'("PSPLINE")')
+          else if (params%field_model.eq.'MARS') then
+             write(output_unit_write,'("MARS")')
+          endif
           write(output_unit_write,'("Magnetic field: ",E17.10)') F%Bo
           write(output_unit_write,'("Electric field: ",E17.10)') F%Eo
+          flush(output_unit_write)
 
        end if
        
@@ -304,9 +318,10 @@ CONTAINS
   !! @param group_id HDF5 group identifier.
   !! @param subgroup_id HDF5 subgroup identifier.
   !! @param h5error HDF5 error status.
-  subroutine which_fields_in_file(params,Bfield,Bflux)
+  subroutine which_fields_in_file(params,Bfield,Bflux,B1field)
     TYPE(KORC_PARAMS), INTENT(IN)      :: params
     LOGICAL, INTENT(OUT)               :: Bfield
+    LOGICAL, INTENT(OUT)               :: B1field
     LOGICAL, INTENT(OUT)               :: Bflux
     CHARACTER(MAX_STRING_LENGTH)       :: filename
     CHARACTER(MAX_STRING_LENGTH)       :: gname
@@ -330,6 +345,8 @@ CONTAINS
     gname = "PSIp"
     call h5lexists_f(h5file_id,TRIM(gname),Bflux,h5error)
 
+    gname = "ReBR"
+    call h5lexists_f(h5file_id,TRIM(gname),B1field,h5error)
 
     call h5fclose_f(h5file_id, h5error)
     if (h5error .EQ. -1) then
@@ -368,10 +385,8 @@ CONTAINS
     if (h5error .EQ. -1) then
        write(output_unit_write,'("KORC ERROR: Something went wrong in: load_field_data_from_hdf5 --> h5fopen_f")')
     end if
-
     
-    if (((.NOT.F%Bflux).AND.(.NOT.F%axisymmetric_fields)).OR. &
-         F%Dim2x1t) then
+    if ((.NOT.F%Bflux).AND.(.NOT.F%axisymmetric_fields)) then
        dset = "/PHI"
        call load_array_from_hdf5(h5file_id,dset,F%X%PHI)
     end if
@@ -394,7 +409,8 @@ CONTAINS
     dset = '/Zo'
     call load_from_hdf5(h5file_id,dset,F%Zo)
 
-    if ((F%Bflux.OR.F%axisymmetric_fields).AND.(.NOT.F%Dim2x1t)) then
+        
+    if (F%Bflux.OR.F%axisymmetric_fields) then
 
        dset = "/FLAG"
        call load_array_from_hdf5(h5file_id,dset,F%FLAG2D)
@@ -403,7 +419,8 @@ CONTAINS
        dset = "/FLAG"
        call load_array_from_hdf5(h5file_id,dset,F%FLAG3D)
     end if
-    
+
+        
     if (F%Bflux) then
 
              
@@ -418,12 +435,42 @@ CONTAINS
           F%PSIp = 0.0_rp
        end if
 
+    end if
 
+        
+    if (params%field_model.eq.'MARS') then
+
+       dset = '/AMP'
+       call load_from_hdf5(h5file_id,dset,F%AMP)
+
+       F%AMP=F%AMP*F%MARS_AMP_Scale
 
     end if
 
+        
+    if (F%B1field) then      
+          
+          dset = "/ReBR"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Re_2D%R)
 
-    
+          dset = "/ReBPHI"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Re_2D%PHI)
+
+          dset = "/ReBZ"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Re_2D%Z)
+
+          dset = "/ImBR"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Im_2D%R)
+
+          dset = "/ImBPHI"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Im_2D%PHI)
+
+          dset = "/ImBZ"
+          call load_array_from_hdf5(h5file_id,dset,F%B1Im_2D%Z)
+
+    end if
+
+        
     if (F%Bfield) then
        if (F%axisymmetric_fields) then
           dset = "/BR"
@@ -458,7 +505,7 @@ CONTAINS
 
 
 
-  subroutine ALLOCATE_2D_FIELDS_ARRAYS(params,F,bfield,bflux)
+  subroutine ALLOCATE_2D_FIELDS_ARRAYS(params,F,bfield,bflux,b1field)
     !! @note Subroutine that allocates the variables keeping the axisymmetric
     !! fields data. @endnote
     TYPE (KORC_PARAMS), INTENT(IN) 	:: params
@@ -467,6 +514,7 @@ CONTAINS
     !! An instance of the KORC derived type FIELDS. In this variable we keep
     !! the loaded data.
     LOGICAL, INTENT(IN)            :: bfield
+    LOGICAL, INTENT(IN)            :: b1field
     LOGICAL, INTENT(IN)            :: bflux
     !! Logical variable that specifies if the variables that keep the poloidal
     !! magnetic flux data is allocated (bflux=T) or not (bflux=F).
@@ -474,8 +522,6 @@ CONTAINS
 
     if (bfield.and.(.not.ALLOCATED(F%B_2D%R))) then
        call ALLOCATE_V_FIELD_2D(F%B_2D,F%dims)
-
-
     end if
 
     if (bflux.and.(.not.ALLOCATED(F%PSIp))) then
@@ -483,8 +529,15 @@ CONTAINS
        F%PSIp=0._rp
     end if
 
+    if (B1field.and.(.not.ALLOCATED(F%B1Re_2D%R))) then
+       call ALLOCATE_V_FIELD_2D(F%B1Re_2D,F%dims)
+       call ALLOCATE_V_FIELD_2D(F%B1Im_2D,F%dims)
+    end if
 
-    if (.NOT.ALLOCATED(F%FLAG2D)) ALLOCATE(F%FLAG2D(F%dims(1),F%dims(3)))
+    if (.NOT.ALLOCATED(F%FLAG2D)) THEN
+       ALLOCATE(F%FLAG2D(F%dims(1),F%dims(3)))
+       F%FLAG2D=0._rp
+    endif
 
     if (.NOT.ALLOCATED(F%X%R)) ALLOCATE(F%X%R(F%dims(1)))
     if (.NOT.ALLOCATED(F%X%Z)) ALLOCATE(F%X%Z(F%dims(3)))
@@ -553,6 +606,14 @@ CONTAINS
     if (ALLOCATED(F%B_2D%PHI)) DEALLOCATE(F%B_2D%PHI)
     if (ALLOCATED(F%B_2D%Z)) DEALLOCATE(F%B_2D%Z)
 
+    if (ALLOCATED(F%B1Re_2D%R)) DEALLOCATE(F%B1Re_2D%R)
+    if (ALLOCATED(F%B1Re_2D%PHI)) DEALLOCATE(F%B1Re_2D%PHI)
+    if (ALLOCATED(F%B1Re_2D%Z)) DEALLOCATE(F%B1Re_2D%Z)
+
+    if (ALLOCATED(F%B1Im_2D%R)) DEALLOCATE(F%B1Im_2D%R)
+    if (ALLOCATED(F%B1Im_2D%PHI)) DEALLOCATE(F%B1Im_2D%PHI)
+    if (ALLOCATED(F%B1Im_2D%Z)) DEALLOCATE(F%B1Im_2D%Z)
+    
     if (ALLOCATED(F%B_3D%R)) DEALLOCATE(F%B_3D%R)
     if (ALLOCATED(F%B_3D%PHI)) DEALLOCATE(F%B_3D%PHI)
     if (ALLOCATED(F%B_3D%Z)) DEALLOCATE(F%B_3D%Z)

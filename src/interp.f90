@@ -22,20 +22,17 @@ module PB_interp
 
 #ifdef PSPLINE
   
-#ifdef DOUBLE_PRECISION
-
-
   TYPE, PRIVATE :: KORC_3D_FIELDS_INTERPOLANT
      !! @note Derived type containing 3-D PSPLINE interpolants for 
      !! cylindrical components of vector fields
      !! \(\mathbf{F}(R,\phi,Z) = F_R\hat{e}_R + F_\phi\hat{e}_phi + 
      !! F_Z\hat{e}_Z\). Real precision of 8 bytes. @endnote
-     TYPE(EZspline3_r8)    :: A     !! Interpolant of a scalar field \(A(R,Z)\).
-     TYPE(EZspline3_r8)    :: R		
+     TYPE(EZspline3)    :: A     !! Interpolant of a scalar field \(A(R,Z)\).
+     TYPE(EZspline3)    :: R		
      !! Interpolant of \(F_R(R,\phi,Z)\).
-     TYPE(EZspline3_r8)    :: PHI	
+     TYPE(EZspline3)    :: PHI	
      !! Interpolant of \(F_\phi(R,\phi,Z)\).
-     TYPE(EZspline3_r8)    :: Z		
+     TYPE(EZspline3)    :: Z		
      !! Interpolant of \(F_Z(R,\phi,Z)\).
 
      INTEGER               :: NR 
@@ -47,9 +44,11 @@ module PB_interp
      INTEGER, DIMENSION(2) :: BCSR = (/ 0, 0 /) 
      !! Not-a-knot boundary condition for the interpolants at both 
      !! ends of the \(R\) direction.
+
      INTEGER, DIMENSION(2) :: BCSPHI = (/ -1, -1 /) 
      !! Periodic boundary condition for the interpolants at both 
      !! ends of the \(\phi\) direction.
+
      INTEGER, DIMENSION(2) :: BCSZ = (/ 0, 0 /) 
      !! Not-a-knot boundary condition for the interpolants at both 
      !! ends of the \(Z\) direction.
@@ -60,13 +59,13 @@ module PB_interp
      !! cylindrical components of vector fields \(\mathbf{F}(R,Z) =
      !! F_R\hat{e}_R + F_\phi\hat{e}_phi+ F_Z\hat{e}_Z\).
      !! Real precision of 8 bytes. @endnote
-     TYPE(EZspline2_r8)    :: A
+     TYPE(EZspline2)    :: A
      !! Interpolant of a scalar field \(A(R,Z)\).
-     TYPE(EZspline2_r8)    :: R
+     TYPE(EZspline2)    :: R
      !! Interpolant of \(F_R(R,Z)\).
-     TYPE(EZspline2_r8)    :: PHI
+     TYPE(EZspline2)    :: PHI
      !! Interpolant of \(F_\phi(R,Z)\).
-     TYPE(EZspline2_r8)    :: Z
+     TYPE(EZspline2)    :: Z
      !! Interpolant of \(F_Z(R,Z)\).
 
      INTEGER               :: NR
@@ -80,66 +79,6 @@ module PB_interp
      !! Not-a-knot boundary condition for the interpolants at both
      !! ends of the \(Z\) direction.
   END TYPE KORC_2D_FIELDS_INTERPOLANT
-
-#elif SINGLE_PRECISION
-
-
-  TYPE, PRIVATE :: KORC_3D_FIELDS_INTERPOLANT
-     !! @note Derived type containing 3-D PSPLINE interpolants for cylindrical
-     !! components of vector fields \(\mathbf{F}(R,\phi,Z) = F_R\hat{e}_R +
-     !! F_\phi\hat{e}_phi + F_Z\hat{e}_Z\).
-     !! Real precision of 4 bytes. @endnote
-     TYPE(EZspline3_r4)    :: R
-     !! Interpolant of \(F_R(R,\phi,Z)\).
-     TYPE(EZspline3_r4)    :: PHI
-     !! Interpolant of \(F_\phi(R,\phi,Z)\).
-     TYPE(EZspline3_r4)    :: Z
-     !! Interpolant of \(F_Z(R,\phi,Z)\).
-
-     INTEGER               :: NR
-     !! Size of mesh containing the field data along the \(R\)-axis.
-     INTEGER               :: NPHI
-     !! Size of mesh containing the field data along the \(\phi\)-axis.
-     INTEGER               :: NZ
-     !! Size of mesh containing the field data along the \(Z\)-axis.
-     INTEGER, DIMENSION(2) :: BCSR = (/ 0, 0 /)
-     !! Not-a-knot boundary condition for the interpolants at both ends
-     !! of the \(R\) direction.
-     INTEGER, DIMENSION(2) :: BCSPHI = (/ -1, -1 /)
-     !! Periodic boundary condition for the interpolants at both ends of
-     !! the \(\phi\) direction.
-     INTEGER, DIMENSION(2) :: BCSZ = (/ 0, 0 /)
-     !! Not-a-knot boundary condition for the interpolants at both ends of
-     !! the \(Z\) direction.
-  END TYPE KORC_3D_FIELDS_INTERPOLANT
-
-  TYPE, PRIVATE :: KORC_2D_FIELDS_INTERPOLANT
-     !! @note Derived type containing 2-D PSPLINE interpolants for cylindrical
-     !! components of vector fields \(\mathbf{F}(R,Z) = F_R\hat{e}_R +
-     !! F_\phi\hat{e}_phi+ F_Z\hat{e}_Z\).
-     !! Real precision of 4 bytes. @endnote
-     TYPE(EZspline2_r4)    :: A
-     !! Interpolant of a scalar field \(A(R,Z)\).
-     TYPE(EZspline2_r4)    :: R
-     !! Interpolant of \(F_R(R,Z)\).
-     TYPE(EZspline2_r4)    :: PHI
-     !! Interpolant of \(F_\phi(R,Z)\).
-     TYPE(EZspline2_r4)    :: Z
-     !! Interpolant of \(F_Z(R,Z)\).
-
-     INTEGER               :: NR
-     !! Size of mesh containing the field data along the \(R\)-axis.
-     INTEGER               :: NZ
-     !! Size of mesh containing the field data along the \(Z\)-axis.
-     INTEGER, DIMENSION(2) :: BCSR = (/ 0, 0 /)
-     !! Not-a-knot boundary condition for the interpolants at both ends
-     !! of the \(R\) direction.
-     INTEGER, DIMENSION(2) :: BCSZ = (/ 0, 0 /)
-     !! Not-a-knot boundary condition for the interpolants at both ends
-     !! of the \(Z\) direction.
-  END TYPE KORC_2D_FIELDS_INTERPOLANT
-
-#endif
 
 
 
@@ -176,7 +115,8 @@ module PB_interp
      !! Separation between grid points along the vertical direction.
   END TYPE KORC_INTERPOLANT_DOMAIN
 
-
+  TYPE(KORC_2D_FIELDS_INTERPOLANT), PRIVATE      :: b1Refield_2d
+  TYPE(KORC_2D_FIELDS_INTERPOLANT), PRIVATE      :: b1Imfield_2d
   TYPE(KORC_2D_FIELDS_INTERPOLANT), PRIVATE      :: bfield_2d
   !! An instance of KORC_2D_FIELDS_INTERPOLANT for interpolating
   !! the magnetic field.
@@ -206,7 +146,8 @@ CONTAINS
     !! See [[korc_types]] and [[korc_fields]].
     integer :: ii,jj
 
-    if (params%field_model(1:7) .EQ. 'PSPLINE') then
+    if ((params%field_model .EQ. 'PSPLINE').or. &
+         (params%field_model .EQ. 'MARS')) then
 
        if (params%mpi_params%rank .EQ. 0) then
           write(output_unit_write,'("* * * * INITIALIZING FIELDS INTERPOLANT * * * *")')
@@ -250,6 +191,113 @@ CONTAINS
 
        end if
 
+       if(F%B1field) then
+
+             write(output_unit_write,*) '2D n=1 MARS magnetic fields'
+          
+             b1Refield_2d%NR = F%dims(1)
+             b1Refield_2d%NZ = F%dims(3)
+
+             ! Initializing BR1Re interpolant
+             call EZspline_init(b1Refield_2d%R,b1Refield_2d%NR, &
+                  b1Refield_2d%NZ,b1Refield_2d%BCSR,b1Refield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Refield_2d%R%x1 = F%X%R
+             b1Refield_2d%R%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Refield_2d%R, F%B1Re_2D%R, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+
+             !write(6,*) 'size',size(F%B1Re_2D%R(:,200))
+             !write(6,*) 'B1Re_2D%R',F%B1Re_2D%R(:,200)*params%cpp%Bo
+             
+             ! Initializing BPHI1Re interpolant
+             call EZspline_init(b1Refield_2d%PHI,b1Refield_2d%NR, &
+                  b1Refield_2d%NZ,b1Refield_2d%BCSR,b1Refield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Refield_2d%PHI%x1 = F%X%R
+             b1Refield_2d%PHI%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Refield_2d%PHI, F%B1Re_2D%PHI, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+             
+             ! Initializing BZ1_Re interpolant
+             call EZspline_init(b1Refield_2d%Z,b1Refield_2d%NR, &
+                  b1Refield_2d%NZ,b1Refield_2d%BCSR,b1Refield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Refield_2d%Z%x1 = F%X%R
+             b1Refield_2d%Z%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Refield_2d%Z, F%B1Re_2D%Z, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+
+             b1Imfield_2d%NR = F%dims(1)
+             b1Imfield_2d%NZ = F%dims(3)
+             
+             ! Initializing BR1RIm interpolant
+             call EZspline_init(b1Imfield_2d%R,b1Imfield_2d%NR, &
+                  b1Imfield_2d%NZ,b1Imfield_2d%BCSR,b1Imfield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Imfield_2d%R%x1 = F%X%R
+             b1Imfield_2d%R%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Imfield_2d%R, F%B1Im_2D%R, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+
+             ! Initializing BPHI1Im interpolant
+             call EZspline_init(b1Imfield_2d%PHI,b1Imfield_2d%NR, &
+                  b1Imfield_2d%NZ,b1Imfield_2d%BCSR,b1Imfield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Imfield_2d%PHI%x1 = F%X%R
+             b1Imfield_2d%PHI%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Imfield_2d%PHI, F%B1Im_2D%PHI, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+
+
+             ! Initializing BZ1_Im interpolant
+             call EZspline_init(b1Imfield_2d%Z,b1Imfield_2d%NR, &
+                  b1Imfield_2d%NZ,b1Imfield_2d%BCSR,b1Imfield_2d%BCSZ,ezerr)
+
+             call EZspline_error(ezerr)
+
+             b1Imfield_2d%Z%x1 = F%X%R
+             b1Imfield_2d%Z%x2 = F%X%Z
+
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+
+             call EZspline_setup(b1Imfield_2d%Z, F%B1Im_2D%Z, ezerr, .TRUE.)
+             call EZspline_error(ezerr)
+
+          
+       end if
+       
        if (F%Bfield) then
           if (F%axisymmetric_fields) then
 
@@ -302,6 +350,11 @@ CONTAINS
 
              write(output_unit_write,*) '3D magnetic field'
 
+
+             if (stel_sym) then
+                bfield_3d%BCSPHI = (/ 0, 0 /) 
+             endif
+             
              bfield_3d%NR = F%dims(1)
              bfield_3d%NPHI = F%dims(2)
              bfield_3d%NZ = F%dims(3)
@@ -318,7 +371,7 @@ CONTAINS
 
              call EZspline_setup(bfield_3d%R, F%B_3D%R, ezerr, .TRUE.)
              call EZspline_error(ezerr)
-
+                        
              ! Initializing PHI component of interpolant
              call EZspline_init(bfield_3d%PHI, bfield_3d%NR, bfield_3d%NPHI, &
                   bfield_3d%NZ,&
@@ -353,7 +406,11 @@ CONTAINS
              fields_domain%FLAG3D = F%FLAG3D
 
              fields_domain%DR = ABS(F%X%R(2) - F%X%R(1))
-             fields_domain%DPHI = 2.0_rp*C_PI/bfield_3d%NPHI
+             if (.not.F%stel_sym) then
+                fields_domain%DPHI = 2.0_rp*C_PI/(bfield_3d%NPHI-1)
+             else
+                fields_domain%DPHI = C_PI/F%nsymm/bfield_3d%NPHI
+             endif
              fields_domain%DZ = ABS(F%X%Z(2) - F%X%Z(1))
           end if
        end if
@@ -421,12 +478,21 @@ CONTAINS
           IZ = INT(FLOOR((Y_Z(pp)  + ABS(fields_domain%Zo) + &
                0.5_rp*fields_domain%DZ)/fields_domain%DZ) + 1.0_rp,idef)
 
-          !write(6,*) thread_num,IR,IPHI,IZ
-          !write(6,*) thread_num,bfield_3d%NR,bfield_3d%NZ
-          !write(6,*) thread_num,shape(fields_domain%FLAG3D)
+          !write(6,*) thread_num,'flag:',shape(fields_domain%FLAG3D)
 
+          !if (((IR.GT.bfield_3d%NR).OR.(IZ.GT.bfield_3d%NZ))) then
+
+          
+
+          !write(6,*) thread_num,'R,PHI,Z',Y_R,Y_PHI,Y_Z
+          !write(6,*) thread_num,'query:',IR,IPHI,IZ
+          !write(6,*) thread_num,'total:',bfield_3d%NR,bfield_3d%NPHI,bfield_3d%NZ
+
+          !end if
+          
 
           if (((IR.GT.bfield_3d%NR).OR.(IZ.GT.bfield_3d%NZ)).OR. &
+               ((IR.LT.1).OR.(IZ.LT.1)).OR. &
                (fields_domain%FLAG3D(IR,IPHI,IZ).NE.1_is)) then
              flag(pp) = 0_is
 
@@ -479,16 +545,40 @@ CONTAINS
     INTEGER, INTENT(IN)  :: pchunk
     TYPE(FIELDS), INTENT(IN)                               :: F
     REAL(rp),DIMENSION(pchunk),INTENT(IN)   :: Y_R,Y_PHI,Y_Z
+    REAL(rp),DIMENSION(pchunk)   :: YPHI,YZ
     REAL(rp),DIMENSION(pchunk),INTENT(OUT)   :: B_R,B_PHI,B_Z
     INTEGER(is),DIMENSION(pchunk),INTENT(INOUT)   :: flagCon
     !  INTEGER(ip) :: ezerr
+    INTEGER(ip)                                            :: pp
+    REAL(rp) :: nsymm
 
-    call check_if_in_fields_domain_p(pchunk,F,Y_R,Y_PHI,Y_Z,flagCon)
+    if (F%stel_sym) then
 
+       nsymm=F%nsymm
+
+       YPHI=Y_PHI
+       YZ=Y_Z
+       
+       do pp=1_idef,pchunk
+          YPHI(pp)=modulo(YPHI(pp),2*C_PI/nsymm)
+          if (YPHI(pp).ge.C_PI/nsymm) then
+             YPHI(pp)=2*C_PI/nsymm-YPHI(pp)
+             YZ(pp)=-YZ(pp)
+          end if
+       end do
+       
+    endif
+
+    call check_if_in_fields_domain_p(pchunk,F,Y_R,YPHI,YZ,flagCon)
+    
     call EZspline_interp(bfield_3d%R,bfield_3d%PHI,bfield_3d%Z, &
-         pchunk,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z,ezerr)
+         pchunk,Y_R,YPHI,YZ,B_R,B_PHI,B_Z,ezerr)
     call EZspline_error(ezerr)
 
+    !write(6,*) 'R,PHI,Z:0',Y_R,Y_PHI,Y_Z
+    !write(6,*) 'R,PHI,Z:1',Y_R,YPHI,YZ
+    !write(6,*) 'BR,BPHI,BZ',B_R,B_PHI,B_Z
+    
   end subroutine interp_3DB_p
 
 
@@ -533,6 +623,72 @@ CONTAINS
 
   end subroutine calculate_magnetic_field_p
 
+  subroutine interp_3Dmars_p(params,pchunk,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z, &
+       flag_cache)
+    TYPE(KORC_PARAMS), INTENT(IN)                              :: params
+    INTEGER, INTENT(IN)  :: pchunk
+    TYPE(FIELDS), INTENT(IN)                               :: F
+    REAL(rp),DIMENSION(pchunk),INTENT(IN)   :: Y_R,Y_PHI,Y_Z
+    REAL(rp),DIMENSION(pchunk),INTENT(OUT)   :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(pchunk)   :: B0_R,B0_PHI,B0_Z
+    REAL(rp),DIMENSION(pchunk)   :: B1_R,B1_PHI,B1_Z
+    REAL(rp),DIMENSION(pchunk)   :: B1Re_R,B1Re_PHI,B1Re_Z
+    REAL(rp),DIMENSION(pchunk)   :: B1Im_R,B1Im_PHI,B1Im_Z
+    REAL(rp),DIMENSION(pchunk)   :: PSIp
+    REAL(rp),DIMENSION(pchunk)   :: cP,sP
+    REAL(rp), DIMENSION(pchunk,3)  :: A
+    !  INTEGER(ip) :: ezerr
+    INTEGER                                      :: cc
+    !! Particle chunk iterator.
+    INTEGER(is),DIMENSION(pchunk),INTENT(INOUT)   :: flag_cache
+    REAL(rp) :: psip_conv
+    REAL(rp) :: amp
+
+    psip_conv=F%psip_conv
+    amp=F%AMP
+
+    call check_if_in_fields_domain_p(pchunk,F,Y_R,Y_PHI,Y_Z,flag_cache)
+
+    call EZspline_interp(bfield_2d%A,b1Refield_2d%R,b1Refield_2d%PHI, &
+         b1Refield_2d%Z,b1Imfield_2d%R,b1Imfield_2d%PHI,b1Imfield_2d%Z, &
+         pchunk,Y_R,Y_Z,A,B1Re_R,B1Re_PHI,B1Re_Z,B1Im_R,B1Im_PHI,B1Im_Z,ezerr)
+    call EZspline_error(ezerr)
+
+    !$OMP SIMD
+    do cc=1_idef,pchunk
+       PSIp(cc)=A(cc,1)
+
+       B0_R(cc) = psip_conv*A(cc,3)/Y_R(cc)
+       B0_PHI(cc) = -F%Bo*F%Ro/Y_R(cc)
+       B0_Z(cc) = -psip_conv*A(cc,2)/Y_R(cc)
+
+       cP(cc)=cos(Y_PHI(cc))
+       sP(cc)=sin(Y_PHI(cc))
+
+       B1_R(cc) = amp*(B1Re_R(cc)*cP(cc)-B1Im_R(cc)*sP(cc))
+       B1_PHI(cc) = amp*(B1Re_PHI(cc)*cP(cc)-B1Im_PHI(cc)*sP(cc))
+       B1_Z(cc) = amp*(B1Re_Z(cc)*cP(cc)-B1Im_Z(cc)*sP(cc))
+
+       B_R(cc) = B0_R(cc)+B1_R(cc)
+       B_PHI(cc) = B0_PHI(cc)+B1_PHI(cc)
+       B_Z(cc) = B0_Z(cc)+B1_Z(cc)
+
+    end do
+    !$OMP END SIMD
+
+    !write(6,*) '(R,PHI,Z)',Y_R,Y_PHI,Y_Z
+    !write(6,*) 'psi',PSIp*params%cpp%Bo*params%cpp%length**2
+    !write(6,*) 'dpsidR',A(:,2)*params%cpp%Bo*params%cpp%length
+    !write(6,*) 'dpsidZ',A(:,3)*params%cpp%Bo*params%cpp%length
+    !write(6,*) 'B0',B0_R,B0_PHI,B0_Z
+    !write(6,*) 'AMP',amp
+    !write(6,*) 'B1Re',B1Re_R,B1Re_PHI,B1Re_Z
+    !write(6,*) 'B1Im',B1Im_R,B1Im_PHI,B1Im_Z
+    !write(6,*) 'B1',B1_R,B1_PHI,B1_Z
+    !write(6,*) 'B',B_R,B_PHI,B_Z
+
+
+  end subroutine interp_3Dmars_p
 
   !> @brief Subroutine that frees memory allocated for PSPLINE interpolants.
   !!

@@ -97,7 +97,8 @@ subroutine intitial_spatial_distribution(params,spp,F)
            spp%vars%Y(nR*(ii-1)+jj,3)=(zmin+Zbuff)+ &
                 (zmax-2._rp*Zbuff-zmin)*(jj-1)/(nZ-1)
         enddo
-     enddo          
+     enddo
+     spp%vars%Y(:,2)=spp%phi_init
   CASE DEFAULT
      spp%vars%Y(:,1)=spp%Xtrace(1)
      spp%vars%Y(:,2)=spp%Xtrace(2)

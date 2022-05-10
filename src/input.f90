@@ -26,6 +26,7 @@ module PB_input
   LOGICAL :: HDF5_error_handling = .TRUE.
   INTEGER :: pchunk = 1
   REAL(rp) :: phi_section
+  LOGICAL :: output_orbit = .FALSE.
 
   !! -----------------------------------------------
   !! plasma_species
@@ -34,7 +35,7 @@ module PB_input
   !! namelist is read
   !! -----------------------------------------------
   INTEGER :: ppp = 1
-  CHARACTER(30) :: spatial_distrib
+  CHARACTER(30) :: spatial_distrib='TRACER'
     !! String describing the type of initial spatial distribution for
     !! each electron species.
     ! Options are: 'UNIFORM', 'DISK', 'TORUS', 'EXPONENTIAL-TORUS',
@@ -46,7 +47,8 @@ module PB_input
     ! Initial position of tracer particle for debugging with
     ! spatial_distribution='TRACER'
   CHARACTER(30) :: position_filename = 'positions.dat'
-  INTEGER :: Rgrid,Zgrid
+  INTEGER :: Rgrid=1,Zgrid=1
+  REAL(rp) :: phi_init=0
 
   !! -----------------------------------------------
   !! analytical_fields_params
@@ -69,10 +71,14 @@ module PB_input
   !! externalPlasmaModel
   !! -----------------------------------------------
   LOGICAL :: Bfield = .FALSE.
+  LOGICAL :: B1field = .FALSE.
   LOGICAL :: axisymmetric_fields = .FALSE.
   LOGICAL :: Bflux = .FALSE.
-  REAL(rp) :: psip_conv = 1
-
+  LOGICAL :: stel_sym = .FALSE.
+  REAL(rp) :: psip_conv = 1.0
+  REAL(rp) :: MARS_AMP_Scale = 1.0
+  REAL(rp) :: nsymm = 1.0
+  
 CONTAINS
 
   subroutine read_namelist(params,infile,echo_in,outdir)
@@ -94,12 +100,13 @@ CONTAINS
     !! Namelist declarations
     NAMELIST /input_parameters/ field_model,magnetic_field_filename, &
          num_punctures,dx,HDF5_error_handling,time_slice,rmax, &
-         rmin,zmax,zmin,pchunk,phi_section
+         rmin,zmax,zmin,pchunk,phi_section,output_orbit
     NAMELIST /plasma_species/ ppp,spatial_distrib,Xtrace,position_filename, &
-         Rgrid,Zgrid
+         Rgrid,Zgrid,phi_init
     NAMELIST /analytical_fields_params/ Bo,minor_radius,major_radius,&
          qa,qo,current_direction
-    NAMELIST /externalPlasmaModel/ Bfield, Bflux,axisymmetric_fields,psip_conv
+    NAMELIST /externalPlasmaModel/ Bfield,B1field,Bflux,axisymmetric_fields, &
+         psip_conv,MARS_AMP_Scale,nsymm,stel_sym
 
 !!-----------------------------------------------------------------------
 !!     open input file.

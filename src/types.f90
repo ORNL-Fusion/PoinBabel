@@ -42,6 +42,7 @@ module PB_types
   !! Default file unit for opening and writing to external an external text file.
   INTEGER, PUBLIC, PARAMETER 	:: output_unit_write = 202 
   !! Default file unit for opening and writing to external an external text file.
+  INTEGER, PUBLIC, PARAMETER 	:: orbit_unit_write = 203 
 
   !> @note KORC string type of length MAX_STRING_LENGTH. @endnote
   TYPE, PUBLIC :: KORC_STRING 
@@ -164,6 +165,7 @@ module PB_types
      INTEGER  :: pchunk=1
      !! number of particles per vectorized chunk
      REAL(rp)  :: phi_section=0.
+     LOGICAL :: output_orbit
   END TYPE KORC_PARAMS
 
 
@@ -217,6 +219,7 @@ module PB_types
      REAL(rp),DIMENSION(3) :: Xtrace
      !! Initial position in Cartesian coordinates for tracer particle
      INTEGER :: Rgrid,Zgrid
+     REAL(rp)  :: phi_init
   END TYPE SPECIES
 
 
@@ -380,6 +383,7 @@ module PB_types
      !! Flag to indicate if the pre-computed fields are axisymmetric.
      LOGICAL 					:: Dim2x1t
      LOGICAL 					:: E_2x1t,ReInterp_2x1t
+     LOGICAL  :: stel_sym
      REAL(rp)  :: t0_2x1t
      INTEGER  :: ind0_2x1t,ind_2x1t
 #ifdef FIO
@@ -393,6 +397,7 @@ module PB_types
      real(c_double)  ::  time0,time1
 #endif
      REAL(rp)  :: psip_conv
+     REAL(rp)  :: nsymm
      
   END TYPE FIELDS
 

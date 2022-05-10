@@ -60,6 +60,7 @@ CONTAINS
     params%pchunk=pchunk
 
     params%phi_section=phi_section
+    params%output_orbit=output_orbit
 
 
     if (params%mpi_params%rank .EQ. 0) then
@@ -122,6 +123,7 @@ CONTAINS
     spp%Xtrace = Xtrace
     spp%Rgrid=Rgrid
     spp%Zgrid=Zgrid
+    spp%phi_init=phi_init
 
     ALLOCATE( spp%vars%punct(params%num_punctures,spp%ppp,2))
     ALLOCATE( spp%vars%Y(spp%ppp,3) )

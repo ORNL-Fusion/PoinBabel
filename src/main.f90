@@ -59,6 +59,10 @@ program main
   !!
   !! Subroutine [[initialize_HDF5]] in [[korc_HDF5]] that initializes
   !! HDF5 library. 
+
+  if (params%mpi_params%rank .EQ. 0) then
+     flush(output_unit_write)
+  end if
   
   call initialize_parameters(params)
   !! <h4>2\. Initialize korc parameters</h4>
@@ -66,7 +70,11 @@ program main
   !! Subroutine [[initialize_korc_parameters]] in [[korc_initialize]] that 
   !! initializes paths and KORC parameters through [[load_korc_params]]
   !! on MPI processes.
-
+  
+  if (params%mpi_params%rank .EQ. 0) then
+     flush(output_unit_write)
+  end if
+  
   call initialize_fields(params,F)
   !! <h4>3\. Initialize fields</h4>
   !!
@@ -156,7 +164,7 @@ program main
   end if
   
   ! * * * SAVING INITIAL CONDITION AND VARIOUS SIMULATION PARAMETERS * * * !
-  
+
   call save_simulation_parameters(params,spp,F)       
 
   if (params%mpi_params%rank .EQ. 0) then
@@ -174,10 +182,15 @@ program main
 
   if (params%field_model.eq.'ANALYTICAL') then     
      call adv_eqn_top(params,F,spp)
-  else if (params%field_model.eq.'PSPLINE') then
+  else if ((params%field_model.eq.'PSPLINE').or. &
+       (params%field_model.eq.'MARS')) then
 #ifdef PSPLINE
      if (F%Bflux) then
-        call adv_interp_psi_top(params,F,spp)
+        if (.not.F%B1field) then
+           call adv_interp_psi_top(params,F,spp)
+        else
+           call adv_interp_mars_top(params,F,spp)
+        endif
      else if (F%Bfield.and.F%axisymmetric_fields) then
         call adv_interp_2DB_top(params,F,spp)
      else if (F%Bfield.and.(.not.F%axisymmetric_fields)) then
@@ -196,7 +209,7 @@ program main
   endif
 
   call save_simulation_outputs(params,spp,F)
-  
+   
   call timing(params)
 
   ! * * * FINALIZING SIMULATION * * * 
@@ -223,6 +236,9 @@ program main
   if (params%mpi_params%rank .EQ. 0) then
      write(output_unit_write,'("PoinBabel ran successfully!")')
      close(output_unit_write)
+     if(params%output_orbit) then
+        close (orbit_unit_write)
+     endif
   end if
   
 end program main

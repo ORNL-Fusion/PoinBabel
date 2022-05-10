@@ -1260,7 +1260,8 @@ CONTAINS
           attr = "Poloidal magnetic field in T"
           call save_to_hdf5(h5file_id,dset,F%AB%Bpo,attr)
 
-       else if (params%field_model .EQ. 'PSPLINE') then
+       else if ((params%field_model .EQ. 'PSPLINE').or. &
+            (params%field_model .EQ. 'MARS')) then
           ALLOCATE(attr_array(1))
 
           dset = TRIM(gname) // "/dims"
@@ -1296,7 +1297,7 @@ CONTAINS
           call save_to_hdf5(h5file_id,dset,F%Zo,attr)
 
           dset = TRIM(gname) // "/Axisymmetric"
-          attr = "Radial position of magnetic axis"
+          attr = "Axisymmetry"
           if(F%axisymmetric_fields) then
              call save_to_hdf5(h5file_id,dset,1_idef,attr)
           else
@@ -1321,38 +1322,79 @@ CONTAINS
           end if
 
 
-          if  (F%axisymmetric_fields.and. &
-               .not.(params%field_model(10:12).eq.'PSI')) then
+          if  (F%Bfield) then
 
-             if (ALLOCATED(F%B_2D%R)) then
+             if (F%axisymmetric_fields) then
+
+                if (ALLOCATED(F%B_2D%R)) then
+                   dset = TRIM(gname) // "/BR"
+                   call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%R)
+                end if
+
+                if (ALLOCATED(F%B_2D%PHI)) then
+                   dset = TRIM(gname) // "/BPHI"
+                   call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%PHI)
+                end if
+
+                if (ALLOCATED(F%B_2D%Z)) then
+                   dset = TRIM(gname) // "/BZ"
+                   call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%Z)
+                end if
+
+
+             else
+
                 dset = TRIM(gname) // "/BR"
-                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%R)
-             end if
+                call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%R)
 
-             if (ALLOCATED(F%B_2D%PHI)) then
                 dset = TRIM(gname) // "/BPHI"
-                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%PHI)
-             end if
+                call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%PHI)
 
-             if (ALLOCATED(F%B_2D%Z)) then
                 dset = TRIM(gname) // "/BZ"
-                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B_2D%Z)
+                call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%Z)
+
              end if
 
+          endif
 
-          else
+          if  (F%B1field) then
 
-             dset = TRIM(gname) // "/BR"
-             call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%R)
+             dset = TRIM(gname) // "/AMP"
+             attr = "Amplitude of perturbation field"
+             call save_to_hdf5(h5file_id,dset,F%AMP,attr)
+             
+             if (ALLOCATED(F%B1Re_2D%R)) then
+                dset = TRIM(gname) // "/B1Re_R"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Re_2D%R)
+             end if
 
-             dset = TRIM(gname) // "/BPHI"
-             call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%PHI)
+             if (ALLOCATED(F%B1Re_2D%PHI)) then
+                dset = TRIM(gname) // "/B1Re_PHI"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Re_2D%PHI)
+             end if
 
-             dset = TRIM(gname) // "/BZ"
-             call rsave_3d_array_to_hdf5(h5file_id, dset,F%B_3D%Z)
+             if (ALLOCATED(F%B1Re_2D%Z)) then
+                dset = TRIM(gname) // "/B1Re_Z"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Re_2D%Z)
+             end if
 
-          end if
+             if (ALLOCATED(F%B1Im_2D%R)) then
+                dset = TRIM(gname) // "/B1Im_R"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Im_2D%R)
+             end if
 
+             if (ALLOCATED(F%B1Im_2D%PHI)) then
+                dset = TRIM(gname) // "/B1Im_PHI"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Im_2D%PHI)
+             end if
+
+             if (ALLOCATED(F%B1Im_2D%Z)) then
+                dset = TRIM(gname) // "/B1Im_Z"
+                call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Im_2D%Z)
+             end if
+
+          endif
+          
           DEALLOCATE(attr_array)  
 
        end if
