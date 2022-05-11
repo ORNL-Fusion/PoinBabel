@@ -569,7 +569,7 @@ CONTAINS
 
     else
        YPHI=Y_PHI
-       YZ=Y_Z       
+       YZ=Y_Z
     endif
 
     call check_if_in_fields_domain_p(pchunk,F,Y_R,YPHI,YZ,flagCon)
@@ -577,6 +577,19 @@ CONTAINS
     call EZspline_interp(bfield_3d%R,bfield_3d%PHI,bfield_3d%Z, &
          pchunk,Y_R,YPHI,YZ,B_R,B_PHI,B_Z,ezerr)
     call EZspline_error(ezerr)
+
+    if (F%stel_sym) then
+
+       YPHI=Y_PHI
+
+       do pp=1_idef,pchunk
+          YPHI(pp)=modulo(YPHI(pp),2*C_PI/nsymm)
+          if (YPHI(pp).ge.C_PI/nsymm) then
+             B_R(pp)=-B_R(pp)
+          end if
+       end do
+
+    endif
 
     !write(6,*) 'R,PHI,Z:0',Y_R,Y_PHI,Y_Z
     !write(6,*) 'R,PHI,Z:1',Y_R,YPHI,YZ
