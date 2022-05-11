@@ -1153,13 +1153,20 @@ CONTAINS
     if (params%mpi_params%rank .EQ. 0) then
        write(output_unit_write,'("Saving simulations parameters")')
     end if
-        
+
     write(tmp_str,'(I18)') params%mpi_params%rank
     filename = TRIM(params%path_to_outputs) // "file_"  &
          // TRIM(ADJUSTL(tmp_str)) // ".h5"
     call h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, h5file_id, h5error)
     call h5fclose_f(h5file_id, h5error)
 
+    if (params%mpi_params%rank .EQ. 0) then
+      if(params%output_orbit) then
+         OPEN(UNIT=orbit_unit_write, &
+         FILE=TRIM(params%path_to_outputs)//"orbit.out", &
+         STATUS='UNKNOWN',FORM='FORMATTED',POSITION='REWIND')
+      end if
+    end if
 
     if (params%mpi_params%rank .EQ. 0) then
        filename = TRIM(params%path_to_outputs) // "simulation_parameters.h5"
@@ -1204,17 +1211,17 @@ CONTAINS
        ! Plasma species group
        gname = "species"
        call h5gcreate_f(h5file_id, TRIM(gname), group_id, h5error)
-       
+
        dset = TRIM(gname) // "/ppp"
        attr = "Particles per (mpi) process"
        call save_to_hdf5(h5file_id,dset,spp%ppp,attr)
-       
+
        dset = TRIM(gname) // "/spatial_distribution"
        call save_string_parameter(h5file_id,dset,(/spp%spatial_distrib/))
 
        dset = TRIM(gname) // "/Y"
        call rsave_2d_array_to_hdf5(h5file_id, dset, spp%vars%Y)
-       
+
        call h5gclose_f(group_id, h5error)
 
 
@@ -1362,7 +1369,7 @@ CONTAINS
              dset = TRIM(gname) // "/AMP"
              attr = "Amplitude of perturbation field"
              call save_to_hdf5(h5file_id,dset,F%AMP,attr)
-             
+
              if (ALLOCATED(F%B1Re_2D%R)) then
                 dset = TRIM(gname) // "/B1Re_R"
                 call rsave_2d_array_to_hdf5(h5file_id, dset,F%B1Re_2D%R)
@@ -1394,8 +1401,8 @@ CONTAINS
              end if
 
           endif
-          
-          DEALLOCATE(attr_array)  
+
+          DEALLOCATE(attr_array)
 
        end if
 
@@ -1464,7 +1471,7 @@ CONTAINS
     if (params%mpi_params%rank .EQ. 0) then
        write(output_unit_write,'("Saving simulations outputs")')
     end if
-    
+
     write(tmp_str,'(I18)') params%mpi_params%rank
     filename = TRIM(params%path_to_outputs) // "file_" &
          // TRIM(ADJUSTL(tmp_str)) // ".h5"
@@ -1475,8 +1482,8 @@ CONTAINS
 
     if (.NOT.object_exists) then ! Check if group does exist.
        call h5gcreate_f(h5file_id, TRIM(gname), group_id, h5error)
-       
-       
+
+
        dset = "Punctures"
        call rsave_3d_array_to_hdf5(group_id, dset, &
             spp%vars%punct)

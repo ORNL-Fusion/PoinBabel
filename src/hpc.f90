@@ -5,11 +5,11 @@ module PB_hpc
 
   IMPLICIT NONE
 
-  LOGICAL, PRIVATE :: timed_already = .FALSE. 
+  LOGICAL, PRIVATE :: timed_already = .FALSE.
   !! Flag to determine if a first call to WMPI_TIME() was made already.
-  REAL(rp), PRIVATE :: t1 
+  REAL(rp), PRIVATE :: t1
   !! Variable to be used in timing a parallel section of KORC.
-  REAL(rp), PRIVATE :: t2 
+  REAL(rp), PRIVATE :: t2
   !! Variable to be used in timing a parallel section of KORC.
 
   PUBLIC :: PB_abort,&
@@ -23,7 +23,7 @@ CONTAINS
   subroutine PB_abort(errorcode)
     !! @note Subroutine that terminates the simulation. @endnote
     INTEGER,INTENT(IN) :: errorcode
-    INTEGER :: mpierr 
+    INTEGER :: mpierr
     !! MPI error status
 
     !! 11: hpc:set_paths
@@ -33,7 +33,7 @@ CONTAINS
     !! 19: ppusher::adv_interp_mars_top
 
     flush(output_unit_write)
-    
+
     call MPI_BARRIER(MPI_COMM_WORLD,mpierr)
 
     call MPI_ABORT(MPI_COMM_WORLD, errorcode, mpierr)
@@ -44,7 +44,7 @@ CONTAINS
     TYPE(KORC_PARAMS), INTENT(INOUT) 	:: params
     !! Core KORC simulation parameters.
     INTEGER 				:: argn,read_stat,exei
-    !! Number of command line inputs. The default value is 
+    !! Number of command line inputs. The default value is
     !! two: the input files path and the outputs path.
     CHARACTER(MAX_STRING_LENGTH) :: ctmp
 
@@ -61,24 +61,20 @@ CONTAINS
 
     !write(6,*) TRIM(params%path_to_outputs)
     !write(6,*) TRIM(params%path_to_inputs)
-    
+
     if (params%mpi_params%rank .EQ. 0) then
 
        OPEN(UNIT=output_unit_write, &
             FILE=TRIM(params%path_to_outputs)//"output.out", &
             STATUS='UNKNOWN',FORM='FORMATTED',POSITION='REWIND')
 
-       OPEN(UNIT=orbit_unit_write, &
-            FILE=TRIM(params%path_to_outputs)//"orbit.out", &
-            STATUS='UNKNOWN',FORM='FORMATTED',POSITION='REWIND')
-       
        write(output_unit_write,'(/,"* * * * * PATHS * * * * *")')
        write(output_unit_write,*) 'The input file is: ',&
             TRIM(params%path_to_inputs)
-       write(output_unit_write,'(/)')      
+       write(output_unit_write,'(/)')
        write(output_unit_write,*) 'The output folder is: ',&
             TRIM(params%path_to_outputs)
-       write(output_unit_write,'("* * * * * * * * * * * * *",/)')      
+       write(output_unit_write,'("* * * * * * * * * * * * *",/)')
 
        write(output_unit_write,'(/,"* * * * * * * GIT INFO * * * * * * *")')
 
@@ -91,23 +87,23 @@ CONTAINS
        call execute_command_line("/global/cfs/cdirs/m3236/PoinBabel/src/get_git_details.sh", &
             exitstat=exei)
 #endif
-       
+
        IF (exei/=0) then
           write(6,*) 'Error executing get_git_details.sh'
           call PB_abort(11)
        end if
-       
+
        OPEN(UNIT=default_unit_open,FILE='git_hash.txt', &
             STATUS='OLD',POSITION='REWIND')
        READ(UNIT=default_unit_open,FMT='(a)',IOSTAT=read_stat) ctmp
-       
+
        IF (read_stat/=0) then
           write(6,*) 'Error reading git_hash.txt'
           call PB_abort(11)
        end if
        write(output_unit_write,*) 'Git hash of most recent commit is: ', &
             TRIM(ctmp)
-       write(output_unit_write,'(/)')      
+       write(output_unit_write,'(/)')
        CLOSE(default_unit_open,STATUS='DELETE')
 
        OPEN(UNIT=default_unit_open,FILE='git_diff.txt', &
@@ -116,47 +112,47 @@ CONTAINS
        write(output_unit_write,*) 'Git diff of HEAD and most recent commit is:'
        DO
           READ(UNIT=default_unit_open,FMT='(a)',IOSTAT=read_stat) ctmp
-          
+
           IF (read_stat.gt.0) then
              write(6,*) 'Error reading git_diff.txt'
              call PB_abort(11)
           else if (read_stat.lt.0) then
              CLOSE(default_unit_open,STATUS='DELETE')
-       
+
              write(output_unit_write,'("* * * * * * * * * * * * * * * * *",/)')
              RETURN
           end if
           write(output_unit_write,*) TRIM(ctmp)
        END DO
 
-     
+
     end if
   end subroutine set_paths
 
   subroutine initialize_mpi(params)
     !! @note Subroutine that initialize MPI communications.@endnote
-    !! Through this subroutine the default MPI communicator MPI_COMM_WORLD 
+    !! Through this subroutine the default MPI communicator MPI_COMM_WORLD
     !! is initialized. Also, a Cartesian
     TYPE(KORC_PARAMS), INTENT(INOUT) 	:: params
     !! Core KORC simulation parameters.
     INTEGER 				:: mpierr
     !! MPI error status.
     INTEGER, PARAMETER 			:: NDIMS = 1
-    !! Number of dimensions of non-standard topology. 
-    !! NDIMS=1 for a 1-D MPI topology, NDIMS=2 for a 2-D MPI topology, 
+    !! Number of dimensions of non-standard topology.
+    !! NDIMS=1 for a 1-D MPI topology, NDIMS=2 for a 2-D MPI topology,
     !! and NDIMS=3 for a 3-D MPI topology.
     INTEGER, DIMENSION(:), ALLOCATABLE 	:: DIMS
-    !! Dimension of the non-standard MPI topology params::mpi_params::mpi_topo. 
+    !! Dimension of the non-standard MPI topology params::mpi_params::mpi_topo.
     !! This is equal to the number of MPI processes in KORC.
     LOGICAL 				:: all_mpis_initialized = .FALSE.
     !! Flag to determine if all the MPI processes were initialized correctly.
     LOGICAL 				:: mpi_process_initialized = .FALSE.
     !! Flag to determine if a given MPI process was initialized correctly.
     LOGICAL, PARAMETER 			:: REORDER = .FALSE.
-    !! Flag to determine if the new MPI topology params::mpi_params::mpi_topo 
+    !! Flag to determine if the new MPI topology params::mpi_params::mpi_topo
     !! needs to be re-ordered.
     LOGICAL, DIMENSION(:), ALLOCATABLE 	:: PERIODS !< Something here
-    !! Array of logicals determining what dimensions of the new MPI 
+    !! Array of logicals determining what dimensions of the new MPI
     !! topology params::mpi_params::mpi_topo are periodic (T) or not (F).
     INTEGER :: ii
     !! Variable to iterate over different MPI processes.
@@ -164,15 +160,15 @@ CONTAINS
 
     !call MPI_INITIALIZED(mpiinit,mpierr)
     !write(6,*) 'initialized after',mpiinit
-    
-    
+
+
     call MPI_INIT(mpierr)
 
     !write(6,*) 'mpi_init error code',mpierr
-    
+
     !call MPI_INITIALIZED(mpiinit,mpierr)
     !write(6,*) 'initialized after',mpiinit
-    
+
 
     if (mpierr .NE. MPI_SUCCESS) then
        write(6,'(/,"* * * * * * * COMMUNICATIONS * * * * * * *")')
@@ -180,16 +176,16 @@ CONTAINS
        write(6,'(/,"* * * * * * * * * ** * * * * * * * * * * *")')
        call MPI_ABORT(MPI_COMM_WORLD, -10, mpierr)
     end if
-    
+
     call MPI_INITIALIZED(mpi_process_initialized,mpierr)
 
     !write(6,*) 'initialized after',mpi_process_initialized
-    
+
     call MPI_REDUCE(mpi_process_initialized,all_mpis_initialized,1, &
          MPI_LOGICAL,MPI_LAND,0,MPI_COMM_WORLD,mpierr)
 
     !write(6,*) 'made it here 2'
-    
+
     call MPI_BCAST(all_mpis_initialized,1, &
          MPI_LOGICAL,0,MPI_COMM_WORLD,mpierr)
 
@@ -209,7 +205,7 @@ CONTAINS
        write(6,'(/,"* * * * * * * * * ** * * * * * * * * * * *")')
        call MPI_ABORT(MPI_COMM_WORLD, -10, mpierr)
     end if
-    
+
     ! * * * Here a Cartesian topology for MPI is created * * * !
     ALLOCATE(DIMS(NDIMS))
     ALLOCATE(PERIODS(NDIMS))
@@ -248,7 +244,7 @@ CONTAINS
        call MPI_BARRIER(MPI_COMM_WORLD,mpierr)
 
        call set_paths(params)
-       
+
        if (params%mpi_params%rank.EQ.0) then
           write(output_unit_write,'(/,"* * * * * COMMUNICATIONS  * * * * *")')
           write(output_unit_write,'(/,"  MPI communications initialized!  ")')
@@ -263,7 +259,7 @@ CONTAINS
           call MPI_ABORT(MPI_COMM_WORLD, -10, mpierr)
        end if
     end if
- 
+
     !...
   end subroutine initialize_mpi
 
@@ -276,11 +272,11 @@ CONTAINS
     REAL(rp) 				:: individual_runtime
     !! Execution time of each MPI process.
     REAL(rp), DIMENSION(:), ALLOCATABLE   :: runtime
-    !! Execution time of KORC defined as the average of the 
+    !! Execution time of KORC defined as the average of the
     !! execution times of all MPI processes.
     INTEGER 				:: mpierr
     !! MPI error status.
-    
+
     if (timed_already) then
        t2 = MPI_WTIME()
 
@@ -308,7 +304,7 @@ CONTAINS
     t1 = MPI_WTIME()
 
     timed_already = .TRUE.
-    
+
   end subroutine timing
 
   !> @brief Subroutine for finalizing MPI communications.
