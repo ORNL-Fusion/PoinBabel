@@ -3,7 +3,7 @@ module PB_input
   !! input file and broadcast to all mpi processes.
   USE PB_types
   USE PB_hpc
-  
+
   IMPLICIT NONE
 
   !! Default values for all inputs
@@ -11,7 +11,7 @@ module PB_input
   !! input_parameters
   !! -----------------------------------------------
   INTEGER :: num_punctures = 1.E3
-    ! Total aimed simulation time in seconds   
+    ! Total aimed simulation time in seconds
     ! Run 10 mu s If transients exist put 5 extra mu s.
   REAL(rp) :: dx = 1.E-2
     ! Time step as fraction of relativistic gyro-period
@@ -53,17 +53,17 @@ module PB_input
   !! -----------------------------------------------
   !! analytical_fields_params
   !! -----------------------------------------------
-  CHARACTER(30) :: current_direction = 'ANTI-PARALLEL' 
+  CHARACTER(30) :: current_direction = 'ANTI-PARALLEL'
     ! 'PARALLEL' or 'ANTI-PARALLEL'
-  REAL(rp) :: Bo = 2.2 
+  REAL(rp) :: Bo = 2.2
     ! In Teslas. ITER: 5.42 DIII-D: 2.19
-  REAL(rp) :: minor_radius = 0.7 
+  REAL(rp) :: minor_radius = 0.7
     ! Minor radius in meters. ITER: 1.5 DIII-D: 0.5
-  REAL(rp) :: major_radius = 1.7 
+  REAL(rp) :: major_radius = 1.7
     ! Major radius in meters. ITER: 6.5 DIII-D: 1.6
-  REAL(rp) :: qa = 5 
+  REAL(rp) :: qa = 5
     ! Safety factor at the separatrix (r=a)
-  REAL(rp) :: qo = 1.5 
+  REAL(rp) :: qo = 1.5
     ! Safety factor at the separatrix (r=a)
 
 
@@ -75,10 +75,12 @@ module PB_input
   LOGICAL :: axisymmetric_fields = .FALSE.
   LOGICAL :: Bflux = .FALSE.
   LOGICAL :: stel_sym = .FALSE.
+  LOGICAL :: Dim2x1t = .false.
   REAL(rp) :: psip_conv = 1.0
   REAL(rp) :: MARS_AMP_Scale = 1.0
   REAL(rp) :: nsymm = 1.0
-  
+  INTEGER :: ind_2x1t = 1
+
 CONTAINS
 
   subroutine read_namelist(params,infile,echo_in,outdir)
@@ -96,7 +98,7 @@ CONTAINS
     LOGICAL :: reading
     INTEGER :: mpierr
     INTEGER :: tmp
-    
+
     !! Namelist declarations
     NAMELIST /input_parameters/ field_model,magnetic_field_filename, &
          num_punctures,dx,HDF5_error_handling,time_slice,rmax, &
@@ -106,7 +108,7 @@ CONTAINS
     NAMELIST /analytical_fields_params/ Bo,minor_radius,major_radius,&
          qa,qo,current_direction
     NAMELIST /externalPlasmaModel/ Bfield,B1field,Bflux,axisymmetric_fields, &
-         psip_conv,MARS_AMP_Scale,nsymm,stel_sym
+         psip_conv,MARS_AMP_Scale,nsymm,stel_sym,Dim2x1t,ind_2x1t
 
 !!-----------------------------------------------------------------------
 !!     open input file.
@@ -116,13 +118,13 @@ CONTAINS
     if (params%mpi_params%rank.eq.0) then
        CALL rmcoment(infile,tempfile)
     end if
-    call MPI_BARRIER(MPI_COMM_WORLD,mpierr)   
+    call MPI_BARRIER(MPI_COMM_WORLD,mpierr)
     OPEN(UNIT=default_unit_open,FILE=tempfile,STATUS='OLD',POSITION='REWIND')
 !!-----------------------------------------------------------------------
 !!    check namelist file for namelist order and number.
 !!-----------------------------------------------------------------------
     DO
-       READ(UNIT=default_unit_open,FMT='(a)',IOSTAT=read_stat) ctmp 
+       READ(UNIT=default_unit_open,FMT='(a)',IOSTAT=read_stat) ctmp
        IF (read_stat/=0) EXIT
        nc=LEN_TRIM(ctmp)
        IF (nc<1) CYCLE
@@ -163,7 +165,7 @@ CONTAINS
              call PB_abort(13)
           END SELECT
           IF (read_stat/=0) then
-             write(output_unit_write,*) ('Error reading namelist '//TRIM(ctmp)//'.')             
+             write(output_unit_write,*) ('Error reading namelist '//TRIM(ctmp)//'.')
              call PB_abort(13)
           end if
        ENDIF
@@ -190,14 +192,14 @@ CONTAINS
 
           WRITE(output_unit_write,'(a,/)') 'VALUE OF ALL INPUTS:'
           WRITE(UNIT=output_unit_write,NML=input_parameters)
-          WRITE(output_unit_write,'(/)') 
+          WRITE(output_unit_write,'(/)')
           WRITE(UNIT=output_unit_write,NML=plasma_species)
-          WRITE(output_unit_write,'(/)') 
+          WRITE(output_unit_write,'(/)')
           WRITE(UNIT=output_unit_write,NML=analytical_fields_params)
-          WRITE(output_unit_write,'(/)') 
+          WRITE(output_unit_write,'(/)')
           WRITE(UNIT=output_unit_write,NML=externalPlasmaModel)
           WRITE(output_unit_write,'(/)')
-             
+
        end if
     end if
 
@@ -217,12 +219,12 @@ CONTAINS
                & magnetic field filename!'
        end if
        call PB_abort(13)
-    end if 
-      
+    end if
+
     end subroutine read_namelist
 
     SUBROUTINE rmcoment(fileold,filenew)
-      
+
     CHARACTER(*), INTENT(IN) :: fileold,filenew
     CHARACTER(128) :: line
     INTEGER, PARAMETER :: nold=55,nnew=56
@@ -260,5 +262,5 @@ CONTAINS
     CLOSE(default_unit_write)
 
   END SUBROUTINE rmcoment
-  
+
 end module PB_input

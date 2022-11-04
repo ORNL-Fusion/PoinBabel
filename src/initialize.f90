@@ -1,5 +1,5 @@
 module PB_initialize
-  !! @note Module with subroutines to load simulation parameters 
+  !! @note Module with subroutines to load simulation parameters
   !! and to define the time step in the simulation.@endnote
   use PB_types
   use PB_constants
@@ -97,14 +97,14 @@ CONTAINS
   ! * * * * * * * * * * * *  * * * * * * * * * * * * * !
 
   subroutine initialize_particles(params,F,spp)
-    !! @note Subroutine that loads the information of the initial condition 
+    !! @note Subroutine that loads the information of the initial condition
     !! of the different particle species. This subroutine calls
-    !! the subroutine that generates the initial energy and pitch angle 
+    !! the subroutine that generates the initial energy and pitch angle
     !! distribution functions. @endnote
     TYPE(KORC_PARAMS), INTENT(IN) 				:: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(IN) 					:: F
-    !! An instance of KORC's derived type FIELDS containing all the information 
+    !! An instance of KORC's derived type FIELDS containing all the information
     !! about the fields used in the simulation. See [[korc_types]]
     !!and [[korc_fields]].
     TYPE(SPECIES), INTENT(OUT) 	:: spp
@@ -129,6 +129,7 @@ CONTAINS
     ALLOCATE( spp%vars%Y(spp%ppp,3) )
     ALLOCATE( spp%vars%B(spp%ppp,3) )
     ALLOCATE( spp%vars%PSI_P(spp%ppp) )
+    ALLOCATE( spp%vars%con_len(spp%ppp) )
     ALLOCATE( spp%vars%flagCon(spp%ppp) )
 #ifdef FIO
     ALLOCATE( spp%vars%hint(spp%ppp))
@@ -136,9 +137,10 @@ CONTAINS
 
     !     write(output_unit_write,'("0 size of PSI_P: ",I16)') size(spp%vars%PSI_P)
     spp%vars%punct = 0.0_rp
-    spp%vars%Y = 0.0_rp    
+    spp%vars%Y = 0.0_rp
     spp%vars%B = 0.0_rp
     spp%vars%PSI_P = 0.0_rp
+    spp%vars%con_len = 0.0_rp
     spp%vars%flagCon = 1_is
 
     ALLOCATE( spp%vars%Y0(spp%ppp,3) )
@@ -161,18 +163,18 @@ CONTAINS
 
 
   subroutine set_up_particles_ic(params,F,spp)
-    !! @note Subroutine with calls to subroutines to load particles' 
+    !! @note Subroutine with calls to subroutines to load particles'
     !! information if it is a restarting simulation, or to initialize the
-    !! spatial and velocity distribution of each species if it is a new  
+    !! spatial and velocity distribution of each species if it is a new
     !! simulation. @endnote
     TYPE(KORC_PARAMS), INTENT(INOUT) 				:: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(INOUT) 					:: F
-    !! An instance of KORC's derived type FIELDS containing all 
-    !! the information about the fields used in the simulation. 
+    !! An instance of KORC's derived type FIELDS containing all
+    !! the information about the fields used in the simulation.
     !! See [[korc_types]] and [[korc_fields]].
     TYPE(SPECIES), INTENT(INOUT)       :: spp
-    !! An instance of KORC's derived type SPECIES containing all 
+    !! An instance of KORC's derived type SPECIES containing all
     !! the information of different electron species. See [[korc_types]].
     !! An instance of the KORC derived type PROFILES.
     INTEGER                                                    :: ii

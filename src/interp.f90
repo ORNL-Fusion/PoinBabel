@@ -156,38 +156,55 @@ CONTAINS
        ! * * * * * * * * MAGNETIC FIELD * * * * * * * * !
        if (F%Bflux) then
 
-          write(output_unit_write,*) '2D poloidal flux function'
+             write(output_unit_write,*) '2D poloidal flux function'
 
-          if (EZspline_allocated(bfield_2d%A)) &
-               call Ezspline_free(bfield_2d%A, ezerr)
+             if (EZspline_allocated(bfield_2d%A)) &
+             call Ezspline_free(bfield_2d%A, ezerr)
 
-          bfield_2d%NR = F%dims(1)
-          bfield_2d%NZ = F%dims(3)
+             bfield_2d%NR = F%dims(1)
+             bfield_2d%NZ = F%dims(3)
 
-          ! Initializing poloidal flux interpolant
-          call EZspline_init(bfield_2d%A,bfield_2d%NR,bfield_2d%NZ, &
-               bfield_2d%BCSR,bfield_2d%BCSZ,ezerr)
+             ! Initializing poloidal flux interpolant
+             call EZspline_init(bfield_2d%A,bfield_2d%NR,bfield_2d%NZ, &
+             bfield_2d%BCSR,bfield_2d%BCSZ,ezerr)
 
-          call EZspline_error(ezerr)
+             call EZspline_error(ezerr)
 
-          bfield_2d%A%x1 = F%X%R
-          bfield_2d%A%x2 = F%X%Z
+             bfield_2d%A%x1 = F%X%R
+             bfield_2d%A%x2 = F%X%Z
 
-          !write(output_unit_write,'("R",E17.10)') F%X%R
-          !write(output_unit_write,'("Z",E17.10)') F%X%Z
+             !write(output_unit_write,'("R",E17.10)') F%X%R
+             !write(output_unit_write,'("Z",E17.10)') F%X%Z
+             !write(output_unit_write,'("PSIp",E17.10)') F%PSIp3D(:,F%ind_2x1t,:)
 
-          call EZspline_setup(bfield_2d%A, F%PSIp, ezerr, .TRUE.)
-          call EZspline_error(ezerr)
+             if (F%Dim2x1t) THEN
 
-          !write(output_unit_write,'("bfield_2d%A: ",E17.10)') bfield_2d%A%fspl(1,:,:)
+                call EZspline_setup(bfield_2d%A, F%PSIp3D(:,F%ind_2x1t,:), ezerr, .TRUE.)
+                call EZspline_error(ezerr)
 
-          if (.not.ALLOCATED(fields_domain%FLAG2D)) &
-               ALLOCATE(fields_domain%FLAG2D(bfield_2d%NR,bfield_2d%NZ))
+                !write(output_unit_write,'("bfield_2d%A: ",E17.10)') bfield_2d%A%fspl(1,:,:)
 
-          fields_domain%FLAG2D = F%FLAG2D
+                if (.not.ALLOCATED(fields_domain%FLAG2D)) &
+                ALLOCATE(fields_domain%FLAG2D(bfield_2d%NR,bfield_2d%NZ))
 
-          fields_domain%DR = ABS(F%X%R(2) - F%X%R(1))
-          fields_domain%DZ = ABS(F%X%Z(2) - F%X%Z(1))
+                fields_domain%FLAG2D = F%FLAG3D(:,F%ind_2x1t,:)
+
+             else
+
+                call EZspline_setup(bfield_2d%A, F%PSIp, ezerr, .TRUE.)
+                call EZspline_error(ezerr)
+
+                !write(output_unit_write,'("bfield_2d%A: ",E17.10)') bfield_2d%A%fspl(1,:,:)
+
+                if (.not.ALLOCATED(fields_domain%FLAG2D)) &
+                ALLOCATE(fields_domain%FLAG2D(bfield_2d%NR,bfield_2d%NZ))
+
+                fields_domain%FLAG2D = F%FLAG2D
+
+             end if
+
+             fields_domain%DR = ABS(F%X%R(2) - F%X%R(1))
+             fields_domain%DZ = ABS(F%X%Z(2) - F%X%Z(1))
 
        end if
 

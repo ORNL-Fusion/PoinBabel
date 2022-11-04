@@ -1202,6 +1202,10 @@ CONTAINS
        attr = "Number of mpi processes"
        call save_to_hdf5(h5file_id,dset,params%mpi_params%nmpi,attr)
 
+       dset = TRIM(gname) // "/phi_section"
+       attr = "Phi of puncture plane"
+       call save_to_hdf5(h5file_id,dset,params%phi_section,attr)
+
        DEALLOCATE(idata)
        DEALLOCATE(attr_array)
 
@@ -1311,9 +1315,30 @@ CONTAINS
              call save_to_hdf5(h5file_id,dset,0_idef,attr)
           end if
 
+          dset = TRIM(gname) // "/Dim2x1t"
+          attr = "Dim2x1t"
+          if(F%Dim2x1t) then
+             call save_to_hdf5(h5file_id,dset,1_idef,attr)
+          else
+             call save_to_hdf5(h5file_id,dset,0_idef,attr)
+          end if
+
+          dset = TRIM(gname) // "/ind_2x1t"
+          attr = "Index for 2x1t"
+          call save_to_hdf5(h5file_id,dset,F%ind_2x1t,attr)
+
+          dset = TRIM(gname) // "/psip_conv"
+          attr = "Scaling factor for magnetic poloidal flux function"
+          call save_to_hdf5(h5file_id,dset,F%psip_conv,attr)
+
           if (ALLOCATED(F%PSIp)) then
              dset = TRIM(gname) // "/psi_p"
              call rsave_2d_array_to_hdf5(h5file_id, dset,F%PSIp)
+          end if
+
+          if (ALLOCATED(F%PSIp3D)) then
+             dset = TRIM(gname) // "/psi_p3D"
+             call rsave_3d_array_to_hdf5(h5file_id, dset,F%PSIp3D)
           end if
 
           if (ALLOCATED(F%FLAG2D)) then
@@ -1487,6 +1512,10 @@ CONTAINS
        dset = "Punctures"
        call rsave_3d_array_to_hdf5(group_id, dset, &
             spp%vars%punct)
+
+       dset = "ConnectionLength"
+       call rsave_1d_array_to_hdf5(group_id, dset, &
+            spp%vars%con_len)
 
        dset = "FlagCon"
        call save_1d_array_to_hdf5(group_id, dset, &

@@ -153,6 +153,7 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: Y_R,Y_PHI,Y_Z
     REAL(rp),DIMENSION(params%pchunk) :: Y_R0,Y_PHI0,Y_Z0,Y_PHI1
     REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: con_len
     INTEGER(is),DIMENSION(params%pchunk)  :: flagCon
     INTEGER                                                    :: pp
     !! Particles iterator.
@@ -171,7 +172,7 @@ contains
     !$OMP& FIRSTPRIVATE(Bo,pchunk,num_punct,phi_section) &
     !$OMP& shared(F,params,spp) &
     !$OMP& PRIVATE(pp,tt,cc,Y_R,Y_PHI,Y_Z,Y_R0,Y_PHI0,Y_Z0,Y_PHI1, &
-    !$OMP& flagCon,B_R,B_PHI,B_Z)
+    !$OMP& flagCon,B_R,B_PHI,B_Z,con_len)
     do pp=1_idef,spp%ppp,pchunk
 
        !$OMP SIMD
@@ -183,6 +184,8 @@ contains
           Y_Z(cc)=spp%vars%Y(pp-1+cc,3)
 
           flagCon(cc)=spp%vars%flagCon(pp-1+cc)
+
+          con_len(cc)=spp%vars%con_len(pp-1+cc)
        end do
        !$OMP END SIMD
 
@@ -195,7 +198,25 @@ contains
              Y_Z0(cc)=Y_Z(cc)
           end do
 
-          call advance_interp_psi_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
+          !write(6,*) 'R0',Y_R0
+          !write(6,*) 'PHI0',Y_PHI0
+          !write(6,*) 'Z0',Y_Z0
+
+          if(params%output_orbit) then
+             write(orbit_unit_write,*) '(R,PHI,Z-0):',Y_R0,Y_PHI0,Y_Z0
+          end if
+
+          call advance_interp_psi_vars(params,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z, &
+               flagCon,con_len)
+
+          if(params%output_orbit) then
+             write(orbit_unit_write,*) '(BR,BPHI,BZ)',B_R,B_PHI,B_Z
+          end if
+
+          if ((pchunk.eq.1).and.(flagCon(1).eq.0)) then
+             write(6,*) 'trace left domain'
+             exit
+          endif
 
           !$OMP SIMD
           do cc=1_idef,pchunk
@@ -208,9 +229,9 @@ contains
                   (modulo(Y_PHI(cc)-phi_section,2*C_PI)> &
                   modulo(Y_PHI0(cc)-phi_section,2*C_PI))) then
 
-                !write(6,*) thread_num,'R1',Y_R
-                !write(6,*) thread_num,'PHI1',Y_PHI1
-                !write(6,*) thread_num,'Z1',Y_Z
+                !write(6,*) 'R1',Y_R
+                !write(6,*) 'PHI1',Y_PHI1
+                !write(6,*) 'Z1',Y_Z
 
                 spp%vars%punct(tt(cc),pp-1+cc,1)=Y_R0(cc)+ &
                      (phi_section-Y_PHI0(cc))* &
@@ -245,6 +266,7 @@ contains
        !$OMP SIMD
        do cc=1_idef,pchunk
           spp%vars%flagCon(pp-1+cc)=flagCon(cc)
+          spp%vars%con_len(pp-1+cc)=con_len(cc)
        end do
        !$OMP END SIMD
 
@@ -626,10 +648,15 @@ contains
                      (modulo(Y_PHI(cc)-phi_section0,2*C_PI)< &
                      modulo(Y_PHI0(cc)-phi_section0,2*C_PI))) then
 
-                   if (phi_section0==0._rp) phi_section1=phi_section0+2*C_PI
+                   if (phi_section0==0._rp) THEN
+                      phi_section1=phi_section0+2*C_PI
+                   else
+                      phi_section1=phi_section0
+                   ENDIF
 
                    !write(6,*) 'tracing counter-clockwise'
-                   !write(6,*) 'phi_section',phi_section1
+                   !write(6,*) 'phi_section0',phi_section0
+                   !write(6,*) 'phi_section1',phi_section1
                    !write(6,*) thread_num,'R0',Y_R0
                    !write(6,*) thread_num,'PHI0',Y_PHI0
                    !write(6,*) thread_num,'Z0',Y_Z0
@@ -1021,7 +1048,8 @@ contains
   end subroutine advance_eqn_vars
 
 #ifdef PSPLINE
-  subroutine advance_interp_psi_vars(params,F,Y_R,Y_PHI,Y_Z,flagCon)
+  subroutine advance_interp_psi_vars(params,F,Y_R,Y_PHI,Y_Z,B_R,B_PHI,B_Z, &
+         flagCon,con_len)
     TYPE(KORC_PARAMS), INTENT(INOUT)                              :: params
     !! Core KORC simulation parameters.
     TYPE(FIELDS), INTENT(IN)                                 :: F
@@ -1044,8 +1072,9 @@ contains
     REAL(rp),DIMENSION(params%pchunk) :: k5_R,k5_PHI,k5_Z,k5_PLL
     REAL(rp),DIMENSION(params%pchunk) :: k6_R,k6_PHI,k6_Z,k6_PLL
     REAL(rp),DIMENSION(params%pchunk) :: Y0_R,Y0_PHI,Y0_Z
-    REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z
-    REAL(rp),DIMENSION(params%pchunk) :: B_R,B_PHI,B_Z,Bmag
+    REAL(rp),DIMENSION(params%pchunk),INTENT(INOUT) :: Y_R,Y_PHI,Y_Z,con_len
+    REAL(rp),DIMENSION(params%pchunk),INTENT(OUT) :: B_R,B_PHI,B_Z
+    REAL(rp),DIMENSION(params%pchunk) :: Bmag
     INTEGER(is),dimension(params%pchunk), intent(inout) :: flagCon
 
     pchunk=params%pchunk
@@ -1172,6 +1201,8 @@ contains
           Y_R(cc)=Y0_R(cc)
           Y_PHI(cc)=Y0_PHI(cc)
           Y_Z(cc)=Y0_Z(cc)
+       else
+          con_len(cc)=con_len(cc)+dx
        end if
 
     end do
